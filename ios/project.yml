@@ -1,0 +1,30 @@
+name: CookingCompanion
+options:
+  bundleIdPrefix: nl.bunq.hackathon
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16"
+
+targets:
+  CookingCompanion:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: nl.bunq.hackathon.CookingCompanion
+        SWIFT_VERSION: "5.9"
+        INFOPLIST_FILE: Sources/Info.plist
+        DEVELOPMENT_TEAM: ""          # fill in your Apple team ID
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleName: CookingCompanion
+        CFBundleDisplayName: Cooking Companion
+        NSMicrophoneUsageDescription: "We need microphone access for voice commands."
+        NSSpeechRecognitionUsageDescription: "We use speech recognition to understand your cooking requests."
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
