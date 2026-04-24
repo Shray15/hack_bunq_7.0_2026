@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plate App - Screen Designs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #e8edf0;
+      --bg-strong: #dfe6ea;
+      --panel: rgba(255, 255, 255, 0.78);
+      --panel-solid: #ffffff;
+      --panel-soft: #f5f8f7;
+      --frame: #0f1316;
+      --frame-edge: rgba(255, 255, 255, 0.08);
+      --text: #162024;
+      --muted: #66757d;
+      --line: rgba(17, 27, 34, 0.08);
+      --green: #2e8b57;
+      --green-deep: #1f5d43;
+      --green-soft: rgba(46, 139, 87, 0.12);
+      --blue: #2d74d7;
+      --blue-soft: rgba(45, 116, 215, 0.12);
+      --amber: #cc8b2f;
+      --amber-soft: rgba(204, 139, 47, 0.14);
+      --red: #ca5b5b;
+      --red-soft: rgba(202, 91, 91, 0.12);
+      --shadow: 0 24px 60px rgba(27, 41, 49, 0.14);
+      --radius-xl: 32px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(232, 237, 240, 0.9)),
+        linear-gradient(90deg, rgba(22, 32, 36, 0.03) 1px, transparent 1px),
+        linear-gradient(rgba(22, 32, 36, 0.03) 1px, transparent 1px);
+      background-size: auto, 28px 28px, 28px 28px;
+      min-height: 100vh;
+      padding: 36px;
+    }
+
+    .page {
+      max-width: 1640px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .page-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 24px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(17, 27, 34, 0.08);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 12px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 24px;
+      height: 1px;
+      background: currentColor;
+    }
+
+    .page-head h1 {
+      font-size: clamp(38px, 4vw, 58px);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+      margin-bottom: 10px;
+    }
+
+    .page-head p {
+      max-width: 720px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .page-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .meta-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(17, 27, 34, 0.08);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      backdrop-filter: blur(12px);
+    }
+
+    .screens {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 28px 22px;
+      align-items: start;
+    }
+
+    .screen-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .screen-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .screen-label strong {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .screen-label span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .phone {
+      width: 100%;
+      max-width: 392px;
+      aspect-ratio: 393 / 852;
+      padding: 10px;
+      border-radius: 42px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, #181d21, #0b0f12 65%);
+      box-shadow: 0 36px 80px rgba(17, 28, 33, 0.22);
+      border: 1px solid rgba(15, 19, 22, 0.22);
+    }
+
+    .phone-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: 34px;
+      background: linear-gradient(180deg, #eef3f1 0%, #f9faf8 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+        inset 0 0 0 1px rgba(17, 27, 34, 0.05);
+    }
+
+    .device-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 132px;
+      height: 28px;
+      background: rgba(13, 17, 20, 0.96);
+      border-radius: 0 0 18px 18px;
+      z-index: 30;
+    }
+
+    .screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 18px 18px 28px;
+      overflow: hidden;
+    }
+
+    .screen::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top right, rgba(46, 139, 87, 0.10), transparent 28%),
+        radial-gradient(circle at top left, rgba(45, 116, 215, 0.08), transparent 24%);
+      pointer-events: none;
+    }
+
+    .surface {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 16px;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 4px 0;
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a2226;
+      letter-spacing: -0.02em;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(22, 32, 36, 0.78);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .topbar-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .topbar-title .mini {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    .topbar-title h2 {
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .icon-button,
+    .tiny-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(12px);
+      color: var(--text);
+      box-shadow: 0 8px 20px rgba(20, 30, 36, 0.06);
+    }
+
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .tiny-button {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green), var(--green-deep));
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      font-weight: 800;
+      box-shadow: 0 10px 24px rgba(31, 93, 67, 0.22);
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+      border-radius: 26px;
+    }
+
+    .soft-card {
+      background: rgba(245, 248, 247, 0.92);
+      border: 1px solid rgba(17, 27, 34, 0.06);
+      border-radius: 22px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .section-head h3 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head .linkish {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--muted);
+      border: 1px solid rgba(17, 27, 34, 0.07);
+    }
+
+    .pill.green {
+      background: var(--green-soft);
+      color: var(--green);
+      border-color: rgba(46, 139, 87, 0.16);
+    }
+
+    .pill.blue {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border-color: rgba(45, 116, 215, 0.16);
+    }
+
+    .pill.amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: rgba(204, 139, 47, 0.18);
+    }
+
+    .pill.red {
+      background: var(--red-soft);
+      color: var(--red);
+      border-color: rgba(202, 91, 91, 0.18);
+    }
+
+    .primary-cta {
+      width: 100%;
+      height: 58px;
+      border-radius: 20px;
+      border: none;
+      background: linear-gradient(135deg, var(--green) 0%, #47a06b 100%);
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      box-shadow: 0 18px 34px rgba(46, 139, 87, 0.24);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .secondary-cta {
+      width: 100%;
+      height: 54px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #1e88ff, #1368d7);
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 16px 32px rgba(19, 104, 215, 0.26);
+    }
+
+    .home-indicator {
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      transform: translateX(-50%);
+      width: 132px;
+      height: 5px;
+      background: rgba(22, 32, 36, 0.16);
+      border-radius: 999px;
+      z-index: 20;
+    }
+
+    .image-cover {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .home-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .brief-card {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .brief-title {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .brief-title h3 {
+      font-size: 27px;
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .brief-title p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .progress-panel {
+      padding: 16px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, #f4faf6, #edf5f1);
+      border: 1px solid rgba(46, 139, 87, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .metric-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+    }
+
+    .metric-head .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .metric-head .value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+    }
+
+    .metric-head .value small {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .track {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(46, 139, 87, 0.12);
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green) 0%, #79c18f 100%);
+    }
+
+    .macro-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .meal-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .meal-card {
+      border-radius: 22px;
+      overflow: hidden;
+      background: var(--panel-solid);
+      border: 1px solid rgba(17, 27, 34, 0.07);
+      box-shadow: 0 14px 26px rgba(25, 35, 39, 0.08);
+    }
+
+    .meal-visual {
+      position: relative;
+      height: 108px;
+    }
+
+    .meal-visual::after,
+    .recipe-hero::after,
+    .mini-recipe-photo::after,
+    .choice-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.28));
+    }
+
+    .meal-type {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #415058;
+    }
+
+    .meal-body {
+      padding: 12px 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .meal-name {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .meal-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .notice-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .notice {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.64);
+      border: 1px solid rgba(17, 27, 34, 0.06);
+      box-shadow: 0 12px 28px rgba(26, 38, 44, 0.07);
+    }
+
+    .notice-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .notice-copy strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.3;
+      margin-bottom: 2px;
+    }
+
+    .notice-copy span {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .chat-layout,
+    .recipe-layout,
+    .nutrition-layout,
+    .profile-layout {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .chat-stream,
+    .recipe-scroll,
+    .order-scroll,
+    .nutrition-scroll,
+    .profile-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .context-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .bubble {
+      max-width: 86%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bubble.user {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+
+    .bubble.ai {
+      align-self: flex-start;
+    }
+
+    .bubble-box {
+      padding: 14px 16px;
+      border-radius: 22px;
+      font-size: 14px;
+      line-height: 1.5;
+      box-shadow: 0 10px 20px rgba(21, 31, 36, 0.06);
+    }
+
+    .bubble.user .bubble-box {
+      background: linear-gradient(135deg, var(--green) 0%, #4da674 100%);
+      color: white;
+      border-bottom-right-radius: 10px;
+    }
+
+    .bubble.ai .bubble-box {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(17, 27, 34, 0.07);
+      color: var(--text);
+      border-bottom-left-radius: 10px;
+    }
+
+    .bubble-time {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 0 4px;
+    }
+
+    .recipe-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .recipe-preview.hero {
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(17, 27, 34, 0.07);
+      box-shadow: 0 18px 30px rgba(25, 37, 42, 0.10);
+    }
+
+    .recipe-hero {
+      position: relative;
+      height: 176px;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .recipe-badges {
+      position: absolute;
+      inset: 12px 12px auto;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .recipe-badges .left,
+    .recipe-badges .right {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .glass-pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(10px);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .recipe-info h4,
+    .choice-body h4 {
+      font-size: 18px;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .mini-recipe {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(17, 27, 34, 0.06);
+    }
+
+    .mini-recipe-photo {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .mini-recipe-copy {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mini-recipe-copy strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.35;
+      margin-bottom: 4px;
+    }
+
+    .mini-recipe-copy span {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .typing {
+      width: 72px;
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(17, 27, 34, 0.07);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      box-shadow: 0 10px 20px rgba(24, 34, 39, 0.06);
+    }
+
+    .typing span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(22, 32, 36, 0.24);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    .typing span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+      0%, 80%, 100% {
+        transform: translateY(0);
+        background: rgba(22, 32, 36, 0.24);
+      }
+      40% {
+        transform: translateY(-4px);
+        background: var(--green);
+      }
+    }
+
+    .composer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(17, 27, 34, 0.07);
+      box-shadow: 0 12px 26px rgba(23, 34, 39, 0.08);
+    }
+
+    .composer-input {
+      flex: 1;
+      min-width: 0;
+      height: 48px;
+      border-radius: 16px;
+      background: rgba(245, 248, 247, 0.95);
+      border: 1px solid rgba(17, 27, 34, 0.05);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .round-button {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 12px 24px rgba(46, 139, 87, 0.22);
+    }
+
+    .round-button.mic {
+      background: linear-gradient(135deg, var(--green), #4aa471);
+    }
+
+    .round-button.send {
+      background: linear-gradient(135deg, var(--text), #2f3a40);
+      box-shadow: 0 12px 24px rgba(22, 32, 36, 0.18);
+    }
+
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(17, 27, 34, 0.08);
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .chip.active {
+      background: var(--green-soft);
+      border-color: rgba(46, 139, 87, 0.16);
+      color: var(--green);
+    }
+
+    .choice-card {
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(17, 27, 34, 0.07);
+      overflow: hidden;
+      box-shadow: 0 16px 28px rgba(24, 35, 41, 0.08);
+    }
+
+    .choice-card.featured {
+      border-color: rgba(46, 139, 87, 0.22);
+      box-shadow: 0 18px 34px rgba(29, 56, 41, 0.12);
+    }
+
+    .choice-hero {
+      position: relative;
+      height: 176px;
+      overflow: hidden;
+    }
+
+    .choice-body {
+      padding: 16px;
+    }
+
+    .select-row {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .select-row .select-button {
+      flex: 1;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--green), #4aa471);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .select-row .score {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .order-summary {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .store-pills {
+      display: flex;
+      gap: 8px;
+    }
+
+    .store-pills .pill {
+      padding-inline: 14px;
+    }
+
+    .basket-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .basket-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 13px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(17, 27, 34, 0.06);
+    }
+
+    .basket-row.faded {
+      opacity: 0.5;
+    }
+
+    .check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .check.live {
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid rgba(46, 139, 87, 0.16);
+    }
+
+    .check.done {
+      background: rgba(46, 139, 87, 0.2);
+      color: var(--green);
+    }
+
+    .basket-copy {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .basket-copy strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.35;
+      margin-bottom: 2px;
+    }
+
+    .basket-copy span {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .basket-price {
+      text-align: right;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .basket-price small {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .delivery-card,
+    .total-card {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .delivery-options {
+      display: flex;
+      gap: 8px;
+    }
+
+    .delivery-options .chip {
+      flex: 1;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 10px;
+    }
+
+    .total-line strong {
+      font-size: 30px;
+      letter-spacing: -0.05em;
+    }
+
+    .ring-panel {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .ring {
+      position: relative;
+      width: 132px;
+      height: 132px;
+    }
+
+    .ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .ring-track {
+      fill: none;
+      stroke: rgba(46, 139, 87, 0.12);
+      stroke-width: 10;
+    }
+
+    .ring-fill {
+      fill: none;
+      stroke: url(#ringGradient);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 251.2;
+      stroke-dashoffset: 136.4;
+    }
+
+    .ring-center {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .ring-center strong {
+      display: block;
+      font-size: 24px;
+      letter-spacing: -0.05em;
+    }
+
+    .ring-center span {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .metric-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .metric-row .head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .metric-row .head strong {
+      color: var(--text);
+    }
+
+    .chart-card {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .week-bars {
+      height: 96px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      align-items: end;
+    }
+
+    .week-col {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .week-bar {
+      width: 100%;
+      border-radius: 10px 10px 6px 6px;
+      background: linear-gradient(180deg, #7abf93 0%, var(--green) 100%);
+    }
+
+    .week-bar.over {
+      background: linear-gradient(180deg, #dfb168 0%, var(--amber) 100%);
+    }
+
+    .week-bar.today {
+      background: linear-gradient(180deg, #9dc6ff 0%, var(--blue) 100%);
+    }
+
+    .week-day {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .log-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(17, 27, 34, 0.06);
+    }
+
+    .log-photo {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .log-copy {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .log-copy strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.35;
+      margin-bottom: 3px;
+    }
+
+    .log-copy span {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .log-kcal {
+      text-align: right;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .log-kcal small {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .profile-hero {
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .profile-hero .avatar {
+      width: 58px;
+      height: 58px;
+      font-size: 20px;
+    }
+
+    .identity {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .identity strong {
+      display: block;
+      font-size: 18px;
+      letter-spacing: -0.03em;
+      margin-bottom: 3px;
+    }
+
+    .identity span {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .option-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .option {
+      padding: 12px 8px;
+      text-align: center;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.66);
+      border: 1px solid rgba(17, 27, 34, 0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .option strong {
+      font-size: 18px;
+    }
+
+    .option.active {
+      background: var(--green-soft);
+      border-color: rgba(46, 139, 87, 0.16);
+      color: var(--green);
+    }
+
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .setting {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(17, 27, 34, 0.06);
+    }
+
+    .setting-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .setting-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .setting-copy strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .setting-copy span {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .setting-value {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--green);
+      text-align: right;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .payment-card {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(30, 136, 255, 0.10), rgba(19, 104, 215, 0.18));
+      border: 1px solid rgba(30, 136, 255, 0.14);
+    }
+
+    .payment-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #1e88ff, #1368d7);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .payment-copy {
+      flex: 1;
+    }
+
+    .payment-copy strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 3px;
+    }
+
+    .payment-copy span {
+      display: block;
+      font-size: 12px;
+      color: #35639c;
+      font-weight: 700;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(46, 139, 87, 0.12);
+    }
+
+    .danger {
+      color: var(--red);
+    }
+
+    @media (max-width: 1100px) {
+      body {
+        padding: 24px;
+      }
+
+      .page-head {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .page-meta {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 18px;
+      }
+
+      .screens {
+        grid-template-columns: 1fr;
+      }
+
+      .phone {
+        margin: 0 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-head">
+      <div>
+        <div class="eyebrow">Plate Design Pass</div>
+        <h1>One-stop cooking companion, redrawn to feel premium.</h1>
+        <p>
+          The screens below are rebuilt to look like a polished consumer product instead of a generated hackathon mockup:
+          lighter surfaces, stronger typography, calmer accents, and real food imagery that makes the recipe flow feel credible.
+        </p>
+      </div>
+      <div class="page-meta">
+        <div class="meta-pill">iPhone 15 Pro proportions</div>
+        <div class="meta-pill">Voice planning + groceries + bunq</div>
+        <div class="meta-pill">Modern glass + editorial layout</div>
+      </div>
+    </header>
+
+    <section class="screens">
+      <article class="screen-wrap">
+        <div class="screen-label">
+          <strong>Splash</strong>
+          <span>Screen 0</span>
+        </div>
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="device-notch"></div>
+            <div class="screen">
+              <div class="surface" style="justify-content:center; align-items:center; text-align:center; gap:26px; background:linear-gradient(180deg, #f4faf6 0%, #eef4f2 50%, #f8faf9 100%);">
+                <div class="status-bar" style="position:absolute; top:18px; left:18px; right:18px; z-index:2;">
+                  <span>9:41</span>
+                  <div class="status-icons"><span>5G</span><span>▮▮▮</span><span>92%</span></div>
+                </div>
+                <div style="width:96px; height:96px; border-radius:28px; background:linear-gradient(135deg, var(--green), var(--green-deep)); box-shadow:0 28px 44px rgba(46, 139, 87, 0.28); display:grid; place-items:center; position:relative;">
+                  <div style="width:42px; height:42px; border-radius:14px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.2);"></div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                  <div style="font-size:54px; font-weight:800; letter-spacing:-0.08em; line-height:0.95;">Plate</div>
+                  <div style="font-size:16px; line-height:1.6; color:var(--muted); max-width:260px;">
+                    Tell us what's happening.<br />We handle the food.
+                  </div>
+                </div>
+                <div style="position:absolute; bottom:38px; font-size:12px; color:var(--muted); font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">
+                  bunq · Albert Heijn · Anthropic
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="screen-wrap">
+        <div class="screen-label">
+          <strong>Home</strong>
+          <span>Screen 1</span>
+        </div>
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="device-notch"></div>
+            <div class="screen">
+              <div class="surface">
+                <div class="status-bar">
+                  <span>9:41</span>
+                  <div class="status-icons"><span>5G</span><span>▮▮▮</span><span>92%</span></div>
+                </div>
+
+                <div class="topbar">
+                  <div class="topbar-title">
+                    <div class="mini">Daily brief</div>
+                    <h2>Good morning, Sai</h2>
+                  </div>
+                  <div class="avatar">S</div>
+                </div>
+
+                <div class="home-grid">
+                  <div class="card brief-card">
+                    <div class="brief-title">
+                      <div class="chip-row">
+                        <div class="pill green">On track today</div>
+                        <div class="pill blue">AH order at 14:00</div>
+                      </div>
+                      <h3>Decide less.<br />Eat better.</h3>
+                      <p>Your plan, calories, and next grocery handoff in one place.</p>
+                    </div>
+
+                    <div class="progress-panel">
+                      <div class="metric-head">
+                        <div>
+                          <div class="label">Today's calories</div>
+                          <div class="value">820 <small>/ 1,800 kcal</small></div>
+                        </div>
+                        <div class="pill green">46% used</div>
+                      </div>
+                      <div class="track"><div class="fill" style="width:46%;"></div></div>
+                      <div class="macro-pills">
+                        <div class="pill blue">Protein 45g</div>
+                        <div class="pill amber">Carbs 82g</div>
+                        <div class="pill">Fat 28g</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="section-head">
+                      <h3>Today's meals</h3>
+                      <div class="linkish">Adjust</div>
+                    </div>
+                    <div class="meal-strip">
+                      <div class="meal-card">
+                        <div class="meal-visual image-cover" style="background-image:url('https://images.unsplash.com/photo-1614961233913-a5113a4a34ed?auto=format&amp;fit=crop&amp;w=900&amp;q=80');">
+                          <div class="meal-type">Breakfast</div>
+                        </div>
+                        <div class="meal-body">
+                          <div class="meal-name">Greek yogurt bowl</div>
+                          <div class="meal-sub">320 kcal</div>
+                        </div>
+                      </div>
+                      <div class="meal-card">
+                        <div class="meal-visual image-cover" style="background-image:url('https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&amp;fit=crop&amp;w=900&amp;q=80');">
+                          <div class="meal-type">Lunch</div>
+                        </div>
+                        <div class="meal-body">
+                          <div class="meal-name">Chicken quinoa salad</div>
+                          <div class="meal-sub">480 kcal</div>
+                        </div>
+                      </div>
+                      <div class="meal-card">
+                        <div class="meal-visual image-cover" style="background-image:url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&amp;fit=crop&amp;w=900&amp;q=80');">
+                          <div class="meal-type">Dinner</div>
+                        </div>
+                        <div class="meal-body">
+                          <div class="meal-name">Still open</div>
+                          <div class="meal-sub" style="color:var(--green); font-weight:800;">Plan dinner</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="notice-row">
+                    <div class="notice">
+                      <div class="notice-icon" style="background:var(--amber-soft); color:var(--amber);">+</div>
+                      <div class="notice-copy">
+                        <strong>You're 300g short on protein this week.</strong>
+                        <span>A lean dinner tonight closes the gap fast.</span>
+                      </div>
+                    </div>
+                    <div class="notice">
+                      <div class="notice-icon" style="background:var(--green-soft); color:var(--green);">✓</div>
+                      <div class="notice-copy">
+                        <strong>Albert Heijn delivery arrives this afternoon.</strong>
+                        <span>6 items · 14:00-16:00 · ready for checkout updates.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button class="primary-cta">
+                  <span>✦</span>
+                  Plan something
+                </button>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="screen-wrap">
+        <div class="screen-label">
+          <strong>AI Planning</strong>
+          <span>Screen 2</span>
+        </div>
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="device-notch"></div>
+            <div class="screen">
+              <div class="surface">
+                <div class="status-bar">
+                  <span>9:41</span>
+                  <div class="status-icons"><span>5G</span><span>▮▮▮</span><span>92%</span></div>
+                </div>
+
+                <div class="topbar">
+                  <div class="topbar-title">
+                    <div class="mini">Voice planner</div>
+                    <h2>Plan a meal</h2>
+                  </div>
+                  <div class="tiny-button">Clear</div>
+                </div>
+
+                <div class="chat-layout">
+                  <div class="context-row">
+                    <div class="pill green">High-protein</div>
+                    <div class="pill amber">Under 600 kcal</div>
+                    <div class="pill">Weeknight</div>
+                  </div>
+
+                  <div class="chat-stream">
+                    <div class="bubble user">
+                      <div class="bubble-box">Something high-protein under 600 calories, quick to make.</div>
+                      <div class="bubble-time">9:38</div>
+                    </div>
+
+                    <div class="bubble ai">
+                      <div class="bubble-box">Got it. I picked options that stay lean, cook fast, and turn into a clean grocery basket.</div>
+                    </div>
+
+                    <div class="recipe-preview hero">
+                      <div class="recipe-hero image-cover" style="background-image:url('https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&amp;fit=crop&amp;w=1200&amp;q=80');">
+                        <div class="recipe-badges">
+                          <div class="left">
+                            <div class="glass-pill">Best match</div>
+                          </div>
+                          <div class="right">
+                            <div class="glass-pill">540 kcal</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="recipe-info">
+                        <h4>Chicken and feta rice bowl</h4>
+                        <div class="meta-row">
+                          <span>48g protein</span>
+                          <span>18 min</span>
+                          <span>AH basket ready</span>
+                        </div>
+                        <div class="tags">
+                          <div class="pill green">High-protein</div>
+                          <div class="pill amber">Quick</div>
+                          <div class="pill blue">Balanced</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="mini-recipe">
+                      <div class="mini-recipe-photo image-cover" style="background-image:url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&amp;fit=crop&amp;w=900&amp;q=80');"></div>
+                      <div class="mini-recipe-copy">
+                        <strong>Salmon with asparagus</strong>
+                        <span>490 kcal · 42g protein · 22 min</span>
+                      </div>
+                    </div>
+
+                    <div class="typing">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="composer">
+                  <div class="composer-input">Quick lunch, keto, under 500 calories</div>
+                  <div class="round-button mic">●</div>
+                  <div class="round-button send">↑</div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="screen-wrap">
+        <div class="screen-label">
+          <strong>Recipe Selection</strong>
+          <span>Screen 3</span>
+        </div>
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="device-notch"></div>
+            <div class="screen">
+              <div class="surface">
+                <div class="status-bar">
+                  <span>9:41</span>
+                  <div class="status-icons"><span>5G</span><span>▮▮▮</span><span>92%</span></div>
+                </div>
+
+                <div class="topbar">
+                  <div class="topbar-title">
+                    <div class="mini">Recipe selection</div>
+                    <h2>Choose a recipe</h2>
+                  </div>
+                  <div class="icon-button">≡</div>
+                </div>
+
+                <div class="chip-row">
+                  <div class="chip active">All</div>
+                  <div class="chip">High-protein</div>
+                  <div class="chip">Low-carb</div>
+                  <div class="chip">Under 30 min</div>
+                </div>
+
+                <div class="recipe-layout">
+                  <div class="recipe-scroll">
+                    <div class="choice-card featured">
+                      <div class="choice-hero image-cover" style="background-image:url('https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&amp;fit=crop&amp;w=1200&amp;q=80');">
+                        <div class="recipe-badges">
+                          <div class="left">
+                            <div class="glass-pill">Best match</div>
+                          </div>
+                          <div class="right">
+                            <div class="glass-pill">540 kcal</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="choice-body">
+                        <h4>Chicken and feta rice bowl</h4>
+                        <div class="meta-row">
+                          <span>18 min</span>
+                          <span>48g protein</span>
+                          <span>Scaled for 1</span>
+                        </div>
+                        <div class="tags">
+                          <div class="pill green">High-protein</div>
+                          <div class="pill amber">Quick</div>
+                          <div class="pill blue">Crowd-safe</div>
+                        </div>
+                        <div class="select-row">
+                          <div class="score">94% fit</div>
+                          <div class="select-button">Select recipe</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="choice-card">
+                      <div class="choice-hero image-cover" style="background-image:url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&amp;fit=crop&amp;w=1200&amp;q=80');">
+                        <div class="recipe-badges">
+                          <div class="right">
+                            <div class="glass-pill">490 kcal</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="choice-body">
+                        <h4>Salmon with asparagus</h4>
+                        <div class="meta-row">
+                          <span>22 min</span>
+                          <span>42g protein</span>
+                          <span>Low-carb</span>
+                        </div>
+                        <div class="tags">
+                          <div class="pill green">High-protein</div>
+                          <div class="pill blue">Omega-3</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="choice-card">
+                      <div class="choice-hero image-cover" style="background-image:url('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&amp;fit=crop&amp;w=1200&amp;q=80');">
+                        <div class="recipe-badges">
+                          <div class="right">
+                            <div class="glass-pill">420 kcal</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="choice-body">
+                        <h4>Roasted chickpea bowl</h4>
+                        <div class="meta-row">
+                          <span>24 min</span>
+                          <span>18g protein</span>
+                          <span>Plant-based</span>
+                        </div>
+                        <div class="tags">
+                          <div class="pill">Balanced</div>
+                          <div class="pill amber">Lighter</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="screen-wrap">
+        <div class="screen-label">
+          <strong>Order &amp; Checkout</strong>
+          <span>Screen 4</span>
+        </div>
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="device-notch"></div>
+            <div class="screen">
+              <div class="surface">
+                <div class="status-bar">
+                  <span>9:41</span>
+                  <div class="status-icons"><span>5G</span><span>▮▮▮</span><span>92%</span></div>
+                </div>
+
+                <div class="topbar">
+                  <div class="topbar-title">
+                    <div class="mini">Checkout</div>
+                    <h2>Order ingredients</h2>
+                  </div>
+                  <div class="tiny-button">AH live</div>
+                </div>
+
+                <div class="order-scroll">
+                  <div class="card order-summary">
+                    <div class="store-pills">
+                      <div class="pill green">Albert Heijn</div>
+                      <div class="pill">Jumbo</div>
+                      <div class="pill">Picnic</div>
+                    </div>
+                    <div>
+                      <h3 style="font-size:20px; letter-spacing:-0.04em; margin-bottom:6px;">Chicken and feta rice bowl</h3>
+                      <p style="font-size:13px; line-height:1.55; color:var(--muted);">
+                        Scaled for 1 person. Pantry items are excluded so the basket stays realistic.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="basket-list">
+                    <div class="basket-row">
+                      <div class="check live"></div>
+                      <div class="basket-copy">
+                        <strong>Chicken breast</strong>
+                        <span>200g · AH Kipfilet 500g</span>
+                      </div>
+                      <div class="basket-price">€4.99<small>Qty 1</small></div>
+                    </div>
+                    <div class="basket-row">
+                      <div class="check live"></div>
+                      <div class="basket-copy">
+                        <strong>Feta cheese</strong>
+                        <span>50g · AH Griekse feta</span>
+                      </div>
+                      <div class="basket-price">€2.29<small>Qty 1</small></div>
+                    </div>
+                    <div class="basket-row">
+                      <div class="check live"></div>
+                      <div class="basket-copy">
+                        <strong>Brown rice</strong>
+                        <span>80g · AH Zilvervliesrijst</span>
+                      </div>
+                      <div class="basket-price">€1.89<small>Qty 1</small></div>
+                    </div>
+                    <div class="basket-row">
+                      <div class="check live"></div>
+                      <div class="basket-copy">
+                        <strong>Cherry tomatoes</strong>
+                        <span>100g · AH Cherrytomaatjes</span>
+                      </div>
+                      <div class="basket-price">€1.49<small>Qty 1</small></div>
+                    </div>
+                    <div class="basket-row faded">
+                      <div class="check done">✓</div>
+                      <div class="basket-copy">
+                        <strong>Olive oil</strong>
+                        <span>15ml · Already in pantry</span>
+                      </div>
+                      <div class="basket-price">Owned<small>Skip</small></div>
+                    </div>
+                  </div>
+
+                  <div class="card delivery-card">
+                    <div class="section-head" style="margin-bottom:0;">
+                      <h3>Delivery</h3>
+                      <div class="linkish">14:00-16:00</div>
+                    </div>
+                    <div class="delivery-options">
+                      <div class="chip active">Today</div>
+                      <div class="chip">Tomorrow</div>
+                      <div class="chip">Pick a date</div>
+                    </div>
+                  </div>
+
+                  <div class="soft-card total-card">
+                    <div class="total-line">
+                      <div>
+                        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:4px;">Total</div>
+                        <div style="font-size:13px; color:var(--muted); font-weight:700;">4 items · AH delivery</div>
+                      </div>
+                      <strong>€12.14</strong>
+                    </div>
+                    <div class="pill blue" style="width:max-content;">bunq checkout ready</div>
+                  </div>
+                </div>
+
+                <div class="secondary-cta">
+                  <span style="font-weight:800;">bunq</span>
+                  Pay €12.14
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="screen-wrap">
+        <div class="screen-label">
+          <strong>Nutrition Tracker</strong>
+          <span>Screen 5</span>
+        </div>
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="device-notch"></div>
+            <div class="screen">
+              <div class="surface">
+                <div class="status-bar">
+                  <span>9:41</span>
+                  <div class="status-icons"><span>5G</span><span>▮▮▮</span><span>92%</span></div>
+                </div>
+
+                <div class="topbar">
+                  <div class="topbar-title">
+                    <div class="mini">Tracker</div>
+                    <h2>Nutrition</h2>
+                  </div>
+                  <div class="tiny-button">This week</div>
+                </div>
+
+                <div class="nutrition-layout">
+                  <div class="card ring-panel">
+                    <div class="ring">
+                      <svg viewBox="0 0 100 100" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#2e8b57" />
+                            <stop offset="100%" stop-color="#2d74d7" />
+                          </linearGradient>
+                        </defs>
+                        <circle class="ring-track" cx="50" cy="50" r="40"></circle>
+                        <circle class="ring-fill" cx="50" cy="50" r="40"></circle>
+                      </svg>
+                      <div class="ring-center">
+                        <div>
+                          <strong>820</strong>
+                          <span>/ 1,800 kcal</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="metric-stack">
+                      <div class="metric-row">
+                        <div class="head"><span>Protein</span><strong>45 / 140g</strong></div>
+                        <div class="track"><div class="fill" style="width:32%;"></div></div>
+                      </div>
+                      <div class="metric-row">
+                        <div class="head"><span>Carbs</span><strong>82 / 180g</strong></div>
+                        <div class="track"><div class="fill" style="width:46%; background:linear-gradient(90deg, var(--amber), #e2ba70);"></div></div>
+                      </div>
+                      <div class="metric-row">
+                        <div class="head"><span>Fat</span><strong>28 / 60g</strong></div>
+                        <div class="track"><div class="fill" style="width:47%; background:linear-gradient(90deg, var(--blue), #7db0f6);"></div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card chart-card">
+                    <div class="section-head" style="margin-bottom:0;">
+                      <h3>This week</h3>
+                      <div class="linkish">Avg 1,540 kcal</div>
+                    </div>
+                    <div class="week-bars">
+                      <div class="week-col"><div class="week-bar" style="height:64px;"></div><div class="week-day">Mon</div></div>
+                      <div class="week-col"><div class="week-bar" style="height:72px;"></div><div class="week-day">Tue</div></div>
+                      <div class="week-col"><div class="week-bar over" style="height:82px;"></div><div class="week-day">Wed</div></div>
+                      <div class="week-col"><div class="week-bar" style="height:60px;"></div><div class="week-day">Thu</div></div>
+                      <div class="week-col"><div class="week-bar today" style="height:38px;"></div><div class="week-day" style="color:var(--blue);">Fri</div></div>
+                      <div class="week-col"><div class="week-bar" style="height:12px; opacity:0.25;"></div><div class="week-day">Sat</div></div>
+                      <div class="week-col"><div class="week-bar" style="height:12px; opacity:0.25;"></div><div class="week-day">Sun</div></div>
+                    </div>
+                  </div>
+
+                  <div class="notice">
+                    <div class="notice-icon" style="background:var(--green-soft); color:var(--green);">↗</div>
+                    <div class="notice-copy">
+                      <strong>On track 3 of 4 days this week.</strong>
+                      <span>Protein stays low most evenings. A planned dinner fixes the pattern.</span>
+                    </div>
+                  </div>
+
+                  <div class="nutrition-scroll">
+                    <div class="section-head" style="margin-bottom:0;">
+                      <h3>Today's log</h3>
+                      <div class="linkish">Add</div>
+                    </div>
+                    <div class="log-list">
+                      <div class="log-row">
+                        <div class="log-photo image-cover" style="background-image:url('https://images.unsplash.com/photo-1614961233913-a5113a4a34ed?auto=format&amp;fit=crop&amp;w=600&amp;q=80');"></div>
+                        <div class="log-copy">
+                          <strong>Greek yogurt bowl</strong>
+                          <span>Breakfast · 08:15</span>
+                        </div>
+                        <div class="log-kcal">320<small>kcal</small></div>
+                      </div>
+                      <div class="log-row">
+                        <div class="log-photo image-cover" style="background-image:url('https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&amp;fit=crop&amp;w=600&amp;q=80');"></div>
+                        <div class="log-copy">
+                          <strong>Chicken quinoa salad</strong>
+                          <span>Lunch · 13:00</span>
+                        </div>
+                        <div class="log-kcal">500<small>kcal</small></div>
+                      </div>
+                      <div class="log-row" style="border-style:dashed; background:rgba(255,255,255,0.45);">
+                        <div class="log-photo" style="display:grid; place-items:center; font-size:24px; font-weight:800; color:var(--green); background:var(--green-soft);">+</div>
+                        <div class="log-copy">
+                          <strong style="color:var(--green);">Log dinner</strong>
+                          <span>Not logged yet</span>
+                        </div>
+                        <div class="log-kcal">--<small>pending</small></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="screen-wrap">
+        <div class="screen-label">
+          <strong>Profile &amp; Goals</strong>
+          <span>Screen 6</span>
+        </div>
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="device-notch"></div>
+            <div class="screen">
+              <div class="surface">
+                <div class="status-bar">
+                  <span>9:41</span>
+                  <div class="status-icons"><span>5G</span><span>▮▮▮</span><span>92%</span></div>
+                </div>
+
+                <div class="topbar">
+                  <div class="topbar-title">
+                    <div class="mini">Settings</div>
+                    <h2>Profile</h2>
+                  </div>
+                  <div class="tiny-button">Save</div>
+                </div>
+
+                <div class="profile-layout">
+                  <div class="card profile-hero">
+                    <div class="avatar">S</div>
+                    <div class="identity">
+                      <strong>Sai Maniraj</strong>
+                      <span>High-protein plan · 1 person household · bunq connected</span>
+                    </div>
+                    <div class="tiny-button">Edit</div>
+                  </div>
+
+                  <div>
+                    <div class="section-head">
+                      <h3>Diet type</h3>
+                    </div>
+                    <div class="option-grid">
+                      <div class="option"><strong>🥦</strong>Balanced</div>
+                      <div class="option active"><strong>💪</strong>High-protein</div>
+                      <div class="option"><strong>🥑</strong>Keto</div>
+                      <div class="option"><strong>🌿</strong>Vegan</div>
+                      <div class="option"><strong>🥩</strong>Paleo</div>
+                      <div class="option"><strong>✎</strong>Custom</div>
+                    </div>
+                  </div>
+
+                  <div class="profile-scroll">
+                    <div class="section-head" style="margin-bottom:0;">
+                      <h3>Goals</h3>
+                    </div>
+                    <div class="settings-list">
+                      <div class="setting">
+                        <div class="setting-left">
+                          <div class="setting-icon" style="background:var(--amber-soft); color:var(--amber);">🔥</div>
+                          <div class="setting-copy">
+                            <strong>Calorie target</strong>
+                            <span>Auto-adjusts with activity later</span>
+                          </div>
+                        </div>
+                        <div class="setting-value">1,800 kcal</div>
+                      </div>
+
+                      <div class="setting">
+                        <div class="setting-left">
+                          <div class="setting-icon" style="background:var(--green-soft); color:var(--green);">◔</div>
+                          <div class="setting-copy">
+                            <strong>Macro split</strong>
+                            <span>High-protein preset</span>
+                          </div>
+                        </div>
+                        <div class="setting-value">40P · 35C · 25F</div>
+                      </div>
+
+                      <div class="setting">
+                        <div class="setting-left">
+                          <div class="setting-icon" style="background:var(--blue-soft); color:var(--blue);">👥</div>
+                          <div class="setting-copy">
+                            <strong>Household size</strong>
+                            <span>Default serving scale</span>
+                          </div>
+                        </div>
+                        <div class="setting-value">1 person</div>
+                      </div>
+                    </div>
+
+                    <div class="section-head" style="margin-bottom:0; margin-top:2px;">
+                      <h3>Allergies</h3>
+                    </div>
+                    <div class="tag-list">
+                      <div class="pill red">Peanuts</div>
+                      <div class="pill red">Gluten</div>
+                      <div class="pill">Dairy</div>
+                      <div class="pill">Eggs</div>
+                      <div class="pill">Shellfish</div>
+                      <div class="pill green">Add</div>
+                    </div>
+
+                    <div class="section-head" style="margin-bottom:0; margin-top:4px;">
+                      <h3>Payment</h3>
+                    </div>
+                    <div class="payment-card">
+                      <div class="payment-logo">bunq</div>
+                      <div class="payment-copy">
+                        <strong>Personal account connected</strong>
+                        <span>•••• •••• •••• 4821</span>
+                      </div>
+                      <div class="status-dot"></div>
+                    </div>
+
+                    <div class="setting">
+                      <div class="setting-left">
+                        <div class="setting-icon" style="background:var(--red-soft); color:var(--red);">→</div>
+                        <div class="setting-copy">
+                          <strong class="danger">Sign out</strong>
+                          <span>Leave this demo profile</span>
+                        </div>
+                      </div>
+                      <div class="setting-value danger">Exit</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

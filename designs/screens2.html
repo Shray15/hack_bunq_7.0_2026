@@ -1,0 +1,1966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plate App — Screen Designs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0d0d0d;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      gap: 48px;
+      padding: 60px;
+      overflow-x: auto;
+      align-items: flex-start;
+    }
+
+    .screen-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .screen-label {
+      color: #555;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* iPhone shell */
+    .iphone {
+      width: 393px;
+      height: 852px;
+      border-radius: 54px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08),
+        0 32px 80px rgba(0,0,0,0.8),
+        inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    /* ─── STATUS BAR ─── */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px 0;
+      position: relative;
+      z-index: 10;
+    }
+    .status-time { font-size: 15px; font-weight: 600; color: #fff; }
+    .status-icons { display: flex; align-items: center; gap: 6px; }
+    .status-icons span {
+      font-size: 12px; color: rgba(255,255,255,0.8);
+    }
+
+    /* ─── SPLASH ─── */
+    .splash-screen {
+      background: #081a0d;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .splash-screen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 45%, rgba(52,199,89,0.18) 0%, transparent 70%);
+    }
+    .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+      margin-top: -40px;
+    }
+    .app-icon {
+      width: 80px; height: 80px;
+      background: #34C759;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 32px rgba(52,199,89,0.4);
+    }
+    .app-icon-inner {
+      width: 30px; height: 30px;
+      background: #081a0d;
+      border-radius: 50%;
+    }
+    .app-name {
+      font-size: 52px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -2px;
+    }
+    .app-tagline {
+      font-size: 15px;
+      font-weight: 400;
+      color: rgba(100,200,120,0.75);
+      text-align: center;
+      line-height: 1.55;
+    }
+    .splash-footer {
+      position: absolute;
+      bottom: 44px;
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(60,140,80,0.55);
+      letter-spacing: 0.02em;
+    }
+
+    /* ─── HOME ─── */
+    .home-screen {
+      background: #0f1210;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .home-header {
+      padding: 14px 20px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    .home-header .greeting-small {
+      font-size: 13px;
+      color: #5a7060;
+      font-weight: 400;
+      margin-bottom: 4px;
+    }
+    .home-header .greeting-main {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .avatar {
+      width: 42px; height: 42px;
+      background: #34C759;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #081a0d;
+      flex-shrink: 0;
+    }
+    .home-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .home-content::-webkit-scrollbar { display: none; }
+
+    /* Calorie card */
+    .cal-card {
+      background: #182018;
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(52,199,89,0.1);
+    }
+    .cal-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .cal-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #4a7050;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .cal-numbers {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+    .cal-numbers span {
+      font-size: 14px;
+      font-weight: 400;
+      color: #5a7060;
+    }
+    .progress-track {
+      height: 6px;
+      background: #253025;
+      border-radius: 3px;
+      margin: 12px 0 12px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 45.6%;
+      background: linear-gradient(90deg, #34C759, #4ADE80);
+      border-radius: 3px;
+    }
+    .macro-row {
+      display: flex;
+      gap: 8px;
+    }
+    .macro-pill {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .macro-p { background: rgba(52,199,89,0.12); color: #34C759; }
+    .macro-c { background: rgba(250,175,50,0.12); color: #FAAF32; }
+    .macro-f { background: rgba(140,100,230,0.12); color: #8C64E6; }
+
+    /* Section header */
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .section-action {
+      font-size: 13px;
+      font-weight: 500;
+      color: #34C759;
+    }
+
+    /* Meal cards */
+    .meals-row {
+      display: flex;
+      gap: 12px;
+      margin: 0 -20px;
+      padding: 0 20px;
+      overflow-x: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .meals-row::-webkit-scrollbar { display: none; }
+    .meal-card {
+      flex-shrink: 0;
+      width: 148px;
+      background: #182018;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .meal-img {
+      width: 100%;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      position: relative;
+    }
+    .meal-img-breakfast { background: linear-gradient(135deg, #3a2010, #5c3420); }
+    .meal-img-lunch     { background: linear-gradient(135deg, #0e2a18, #1a4828); }
+    .meal-img-dinner    { background: linear-gradient(135deg, #1a1030, #2e1a50); }
+    .meal-tag {
+      position: absolute;
+      top: 8px; left: 8px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .meal-info { padding: 10px 10px 12px; }
+    .meal-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .meal-kcal {
+      font-size: 12px;
+      color: #5a7060;
+      font-weight: 400;
+    }
+    .meal-kcal strong { color: #34C759; font-weight: 600; }
+
+    /* Insight nudge */
+    .insight-card {
+      background: rgba(250,175,50,0.08);
+      border: 1px solid rgba(250,175,50,0.18);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .insight-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .insight-text {
+      font-size: 13px;
+      color: #c8a050;
+      line-height: 1.45;
+    }
+    .insight-text strong { color: #FAAF32; font-weight: 600; }
+
+    /* Delivery banner */
+    .delivery-banner {
+      background: #111a14;
+      border: 1px solid rgba(52,199,89,0.15);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .delivery-dot {
+      width: 8px; height: 8px;
+      background: #34C759;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(52,199,89,0.6);
+    }
+    .delivery-text { flex: 1; }
+    .delivery-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+    .delivery-sub {
+      font-size: 12px;
+      color: #5a7060;
+    }
+    .delivery-arrow {
+      font-size: 16px;
+      color: #34C759;
+    }
+
+    /* CTA button */
+    .cta-area {
+      padding: 12px 20px 28px;
+      flex-shrink: 0;
+      background: linear-gradient(to bottom, transparent, #0f1210 50%);
+    }
+    .cta-btn {
+      width: 100%;
+      height: 56px;
+      background: #34C759;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 700;
+      color: #081a0d;
+      letter-spacing: -0.2px;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(52,199,89,0.3);
+    }
+
+    /* ─── HOME INDICATOR ─── */
+    .home-indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 134px;
+      height: 5px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 3px;
+    }
+
+    /* ─── SCREEN 2: AI CHAT / VOICE ─── */
+    .chat-screen {
+      background: #0f1210;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .chat-messages::-webkit-scrollbar { display: none; }
+
+    .chat-context-pill {
+      align-self: center;
+      background: rgba(52,199,89,0.1);
+      border: 1px solid rgba(52,199,89,0.2);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: #34C759;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    /* Bubble base */
+    .bubble { max-width: 78%; display: flex; flex-direction: column; gap: 3px; }
+    .bubble-user { align-self: flex-end; }
+    .bubble-ai   { align-self: flex-start; }
+
+    .bubble-text {
+      padding: 11px 14px;
+      border-radius: 18px;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .bubble-user .bubble-text {
+      background: #34C759;
+      color: #081a0d;
+      font-weight: 500;
+      border-bottom-right-radius: 5px;
+    }
+    .bubble-ai .bubble-text {
+      background: #1c221e;
+      color: #e8f0ea;
+      border-bottom-left-radius: 5px;
+    }
+    .bubble-time {
+      font-size: 11px;
+      color: #3d5040;
+      padding: 0 4px;
+    }
+    .bubble-user .bubble-time { text-align: right; }
+
+    /* Recipe preview card inside chat */
+    .chat-recipe-card {
+      background: #182018;
+      border: 1px solid rgba(52,199,89,0.15);
+      border-radius: 16px;
+      overflow: hidden;
+      max-width: 82%;
+      align-self: flex-start;
+    }
+    .chat-recipe-img {
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      background: linear-gradient(135deg, #0e2a18 0%, #1a4828 50%, #0a1e10 100%);
+      position: relative;
+    }
+    .chat-recipe-img .ai-badge {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(52,199,89,0.2);
+      border: 1px solid rgba(52,199,89,0.3);
+      border-radius: 8px;
+      padding: 2px 7px;
+      font-size: 10px;
+      color: #34C759;
+      font-weight: 600;
+    }
+    .chat-recipe-body { padding: 12px 14px 14px; }
+    .chat-recipe-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      letter-spacing: -0.2px;
+    }
+    .chat-recipe-meta {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .chat-recipe-meta span {
+      font-size: 12px;
+      color: #5a7060;
+    }
+    .chat-recipe-meta strong { color: #34C759; font-weight: 600; }
+    .chat-recipe-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .recipe-tag {
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .tag-protein { background: rgba(52,199,89,0.12); color: #34C759; }
+    .tag-keto    { background: rgba(140,100,230,0.12); color: #8C64E6; }
+    .tag-quick   { background: rgba(250,175,50,0.12); color: #FAAF32; }
+
+    /* Typing indicator */
+    .typing-indicator {
+      background: #1c221e;
+      border-radius: 18px;
+      border-bottom-left-radius: 5px;
+      padding: 12px 16px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      align-self: flex-start;
+    }
+    .typing-dot {
+      width: 7px; height: 7px;
+      background: #3d5a42;
+      border-radius: 50%;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); background: #34C759; }
+    }
+
+    /* Voice input bar */
+    .voice-bar {
+      padding: 12px 16px 32px;
+      background: #0f1210;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .text-input-mock {
+      flex: 1;
+      background: #1c221e;
+      border-radius: 24px;
+      padding: 12px 16px;
+      font-size: 15px;
+      color: #3d5040;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .text-input-mock span { font-size: 18px; }
+    .mic-btn {
+      width: 52px; height: 52px;
+      background: #34C759;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 6px rgba(52,199,89,0.15), 0 6px 20px rgba(52,199,89,0.3);
+    }
+
+    /* ─── SCREEN 4: ORDER & CHECKOUT ─── */
+    .order-screen {
+      background: #0f1210;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .order-screen-header {
+      padding: 14px 20px 12px;
+    }
+    .order-back {
+      font-size: 15px; color: #34C759; font-weight: 500;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .order-title {
+      font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px;
+      margin-bottom: 2px;
+    }
+    .order-sub { font-size: 14px; color: #4a6050; }
+
+    /* Store tabs */
+    .store-tabs {
+      display: flex; gap: 0;
+      margin: 0 20px 16px;
+      background: #182018;
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .store-tab {
+      flex: 1; text-align: center;
+      padding: 8px 0;
+      border-radius: 9px;
+      font-size: 13px; font-weight: 600;
+      color: #4a6050;
+    }
+    .store-tab.active {
+      background: #34C759; color: #081a0d;
+    }
+
+    /* Ingredient list */
+    .ingredient-list {
+      flex: 1; overflow-y: auto;
+      padding: 0 20px 8px;
+      display: flex; flex-direction: column; gap: 1px;
+      -ms-overflow-style: none; scrollbar-width: none;
+    }
+    .ingredient-list::-webkit-scrollbar { display: none; }
+
+    .ingredient-section-label {
+      font-size: 11px; font-weight: 600; color: #3d5040;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 10px 0 6px;
+    }
+    .ingredient-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px;
+      background: #182018;
+      border-radius: 12px;
+      margin-bottom: 4px;
+    }
+    .ingredient-row.have-it {
+      opacity: 0.4;
+    }
+    .ingredient-check {
+      width: 22px; height: 22px;
+      border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .check-yes { background: #34C759; color: #081a0d; }
+    .check-no  { background: #253025; color: transparent; }
+    .ingredient-info { flex: 1; }
+    .ingredient-name {
+      font-size: 14px; font-weight: 500; color: #fff;
+      margin-bottom: 2px;
+    }
+    .ingredient-row.have-it .ingredient-name {
+      text-decoration: line-through; color: #4a6050;
+    }
+    .ingredient-qty { font-size: 12px; color: #4a6050; }
+    .ingredient-product {
+      text-align: right;
+    }
+    .product-name { font-size: 11px; color: #4a6050; margin-bottom: 2px; }
+    .product-price { font-size: 14px; font-weight: 600; color: #fff; }
+    .have-it-badge {
+      font-size: 11px; color: #34C759; font-weight: 500;
+    }
+
+    /* Delivery selector */
+    .delivery-select {
+      margin: 0 20px 12px;
+      background: #182018;
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .delivery-select-left { display: flex; flex-direction: column; gap: 2px; }
+    .delivery-select-label { font-size: 11px; color: #4a6050; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    .delivery-options { display: flex; gap: 8px; margin-top: 8px; }
+    .delivery-option {
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      border: 1px solid rgba(255,255,255,0.1); color: #5a7060;
+    }
+    .delivery-option.active {
+      background: rgba(52,199,89,0.12);
+      border-color: rgba(52,199,89,0.3);
+      color: #34C759;
+    }
+
+    /* Order total + CTA */
+    .order-footer {
+      padding: 10px 20px 28px;
+      background: #0f1210;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .order-total-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+    }
+    .order-total-label { font-size: 14px; color: #5a7060; }
+    .order-total-items { font-size: 13px; color: #3d5040; margin-top: 2px; }
+    .order-total-amount { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -1px; }
+    .bunq-btn {
+      width: 100%; height: 56px;
+      background: linear-gradient(135deg, #00a4ff 0%, #0070e0 100%);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+      font-size: 16px; font-weight: 700; color: #fff;
+      letter-spacing: -0.2px;
+      box-shadow: 0 8px 24px rgba(0,120,230,0.35);
+    }
+    .bunq-logo {
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-size: 13px; font-weight: 800;
+    }
+
+    /* ─── SCREEN 5: NUTRITION TRACKER ─── */
+    .nutrition-screen {
+      background: #0f1210;
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+    }
+    .nutrition-header {
+      padding: 14px 20px 16px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .nutrition-title {
+      font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px;
+    }
+    .nutrition-date { font-size: 13px; color: #4a6050; margin-top: 2px; }
+    .week-btn {
+      font-size: 13px; color: #34C759; font-weight: 500;
+    }
+    .nutrition-content {
+      flex: 1; overflow-y: auto; padding: 0 20px 20px;
+      display: flex; flex-direction: column; gap: 16px;
+      -ms-overflow-style: none; scrollbar-width: none;
+    }
+    .nutrition-content::-webkit-scrollbar { display: none; }
+
+    /* Big calorie ring (simulated with CSS) */
+    .calorie-ring-card {
+      background: #182018;
+      border-radius: 20px;
+      padding: 20px;
+      display: flex; align-items: center; gap: 20px;
+      border: 1px solid rgba(52,199,89,0.1);
+    }
+    .ring-wrap {
+      position: relative; flex-shrink: 0;
+      width: 100px; height: 100px;
+    }
+    .ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring-track { fill: none; stroke: #253025; stroke-width: 10; }
+    .ring-fill  { fill: none; stroke: #34C759; stroke-width: 10;
+                  stroke-linecap: round;
+                  stroke-dasharray: 251.2;
+                  stroke-dashoffset: 136.4; /* 45.7% filled */ }
+    .ring-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .ring-num { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+    .ring-unit { font-size: 10px; color: #4a6050; font-weight: 500; }
+    .ring-stats { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .ring-stat-row { display: flex; flex-direction: column; gap: 4px; }
+    .ring-stat-head { display: flex; justify-content: space-between; }
+    .ring-stat-label { font-size: 12px; color: #5a7060; font-weight: 500; }
+    .ring-stat-val   { font-size: 12px; font-weight: 600; }
+    .ring-bar { height: 5px; background: #253025; border-radius: 3px; overflow: hidden; }
+    .ring-bar-fill { height: 100%; border-radius: 3px; }
+    .bar-protein { background: #34C759; width: 58%; }
+    .bar-carbs   { background: #FAAF32; width: 72%; }
+    .bar-fat     { background: #8C64E6; width: 44%; }
+    .val-protein { color: #34C759; }
+    .val-carbs   { color: #FAAF32; }
+    .val-fat     { color: #8C64E6; }
+
+    /* Weekly bar chart */
+    .week-chart-card {
+      background: #182018; border-radius: 18px; padding: 16px;
+    }
+    .week-chart-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+    }
+    .week-chart-title { font-size: 15px; font-weight: 600; color: #fff; }
+    .week-chart-avg   { font-size: 12px; color: #4a6050; }
+    .week-bars {
+      display: flex; align-items: flex-end; gap: 6px; height: 64px;
+    }
+    .week-bar-wrap {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+    }
+    .week-bar {
+      width: 100%; border-radius: 4px 4px 0 0;
+    }
+    .week-bar.on-track  { background: #34C759; }
+    .week-bar.over      { background: #FAAF32; }
+    .week-bar.today     { background: #34C759; opacity: 0.5; }
+    .week-bar-day { font-size: 10px; color: #3d5040; font-weight: 500; }
+    .week-bar-day.today-lbl { color: #34C759; }
+
+    /* Meal log */
+    .meal-log-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      background: #182018; border-radius: 14px;
+    }
+    .meal-log-img {
+      width: 48px; height: 48px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .log-img-1 { background: linear-gradient(135deg,#3a2010,#5c3420); }
+    .log-img-2 { background: linear-gradient(135deg,#0e2a18,#1a4828); }
+    .meal-log-info { flex: 1; }
+    .meal-log-name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+    .meal-log-time { font-size: 12px; color: #4a6050; }
+    .meal-log-kcal { text-align: right; }
+    .meal-log-num  { font-size: 15px; font-weight: 700; color: #fff; }
+    .meal-log-unit { font-size: 11px; color: #4a6050; }
+
+    /* ─── SCREEN 6: PROFILE & GOALS ─── */
+    .profile-screen {
+      background: #0f1210;
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+    }
+    .profile-header {
+      padding: 14px 20px 16px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .profile-title { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+    .profile-save  { font-size: 15px; color: #34C759; font-weight: 600; }
+
+    .profile-content {
+      flex: 1; overflow-y: auto;
+      padding: 0 20px 28px;
+      display: flex; flex-direction: column; gap: 20px;
+      -ms-overflow-style: none; scrollbar-width: none;
+    }
+    .profile-content::-webkit-scrollbar { display: none; }
+
+    /* Avatar row */
+    .profile-avatar-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px;
+      background: #182018; border-radius: 18px;
+    }
+    .profile-avatar-big {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: #34C759;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 700; color: #081a0d;
+      flex-shrink: 0;
+    }
+    .profile-name-block { flex: 1; }
+    .profile-name  { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .profile-email { font-size: 13px; color: #4a6050; }
+    .profile-edit-btn {
+      font-size: 13px; color: #34C759; font-weight: 500;
+      background: rgba(52,199,89,0.1);
+      border-radius: 10px; padding: 5px 12px;
+    }
+
+    /* Section group */
+    .profile-group { display: flex; flex-direction: column; gap: 4px; }
+    .profile-group-label {
+      font-size: 11px; font-weight: 600; color: #3d5040;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 6px; padding-left: 4px;
+    }
+
+    /* Diet type pill grid */
+    .diet-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .diet-pill {
+      background: #182018;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 10px 6px;
+      text-align: center;
+      font-size: 13px; font-weight: 500; color: #5a7060;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .diet-pill.active {
+      background: rgba(52,199,89,0.12);
+      border-color: rgba(52,199,89,0.35);
+      color: #34C759;
+    }
+    .diet-pill-icon { font-size: 20px; }
+
+    /* Row setting */
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 14px;
+      background: #182018; border-radius: 13px;
+      margin-bottom: 4px;
+    }
+    .setting-row-left { display: flex; align-items: center; gap: 10px; }
+    .setting-row-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .icon-cal   { background: rgba(52,199,89,0.15); }
+    .icon-macro { background: rgba(250,175,50,0.15); }
+    .icon-size  { background: rgba(140,100,230,0.15); }
+    .icon-allergy { background: rgba(255,80,80,0.12); }
+    .icon-bunq  { background: rgba(0,120,230,0.15); }
+    .setting-label { font-size: 14px; font-weight: 500; color: #fff; }
+    .setting-sub   { font-size: 12px; color: #4a6050; margin-top: 1px; }
+    .setting-value {
+      font-size: 14px; font-weight: 600; color: #34C759;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .setting-value.neutral { color: #5a7060; }
+    .setting-chevron { font-size: 16px; color: #3d5040; }
+
+    /* Allergy tags */
+    .allergy-row {
+      display: flex; flex-wrap: wrap; gap: 7px;
+      padding: 12px 14px;
+      background: #182018; border-radius: 13px;
+    }
+    .allergy-tag {
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+    }
+    .allergy-active {
+      background: rgba(255,80,80,0.12);
+      border: 1px solid rgba(255,80,80,0.25);
+      color: #ff6060;
+    }
+    .allergy-inactive {
+      background: #182018;
+      border: 1px solid rgba(255,255,255,0.07);
+      color: #4a6050;
+    }
+
+    /* bunq connected card */
+    .bunq-connected {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px;
+      background: rgba(0,120,230,0.08);
+      border: 1px solid rgba(0,120,230,0.2);
+      border-radius: 14px;
+    }
+    .bunq-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #00a4ff, #0070e0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+    .bunq-connected-info { flex: 1; }
+    .bunq-connected-name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+    .bunq-connected-sub  { font-size: 12px; color: #4070a0; }
+    .bunq-connected-dot  {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #34C759;
+      box-shadow: 0 0 6px rgba(52,199,89,0.6);
+    }
+
+    /* ─── SCREEN 3: RECIPE SELECTION ─── */
+    .recipe-screen {
+      background: #0f1210;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .recipe-screen-header {
+      padding: 14px 20px 0;
+    }
+    .recipe-screen-back {
+      font-size: 15px;
+      color: #34C759;
+      font-weight: 500;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .recipe-screen-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+      margin-bottom: 2px;
+    }
+    .recipe-screen-sub {
+      font-size: 14px;
+      color: #4a6050;
+      margin-bottom: 16px;
+    }
+
+    /* Filter chips */
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      padding: 0 20px 16px;
+      overflow-x: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #7a9080;
+    }
+    .filter-chip.active {
+      background: rgba(52,199,89,0.12);
+      border-color: rgba(52,199,89,0.35);
+      color: #34C759;
+    }
+
+    /* Big recipe cards (vertical list) */
+    .recipe-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .recipe-list::-webkit-scrollbar { display: none; }
+
+    .recipe-big-card {
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: #182018;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .recipe-big-card.featured {
+      border-color: rgba(52,199,89,0.3);
+      box-shadow: 0 0 0 1px rgba(52,199,89,0.15), 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .recipe-big-img {
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+      position: relative;
+    }
+    .rimg-1 { background: linear-gradient(135deg, #0a2215 0%, #1a5030 60%, #0e3020 100%); }
+    .rimg-2 { background: linear-gradient(135deg, #1a1008 0%, #402808 60%, #201408 100%); }
+    .rimg-3 { background: linear-gradient(135deg, #08101a 0%, #103050 60%, #0a1828 100%); }
+    .rimg-4 { background: linear-gradient(135deg, #1a0808 0%, #401818 60%, #200e0e 100%); }
+
+    .recipe-best-badge {
+      position: absolute;
+      top: 12px; left: 12px;
+      background: #34C759;
+      color: #081a0d;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 8px;
+      letter-spacing: 0.02em;
+    }
+    .recipe-kcal-badge {
+      position: absolute;
+      top: 12px; right: 12px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .recipe-big-body { padding: 14px 16px 16px; }
+    .recipe-big-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+    .recipe-big-meta {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .recipe-big-meta span { font-size: 13px; color: #5a7060; }
+    .recipe-big-meta strong { color: #e0ebe2; font-weight: 500; }
+    .recipe-big-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* Select button on featured card */
+    .recipe-select-btn {
+      width: 100%;
+      margin-top: 12px;
+      height: 44px;
+      background: #34C759;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #081a0d;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── SPLASH SCREEN ── -->
+  <div class="screen-wrap">
+    <span class="screen-label">Splash</span>
+    <div class="iphone">
+      <div class="splash-screen">
+        <div class="status-bar" style="position:absolute;top:0;left:0;right:0;">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <span>●●●</span>
+            <span>▮▮</span>
+          </div>
+        </div>
+        <div class="splash-content">
+          <div class="app-icon">
+            <div class="app-icon-inner"></div>
+          </div>
+          <div class="app-name">Plate</div>
+          <div class="app-tagline">
+            Tell us what's happening.<br />We handle the food.
+          </div>
+        </div>
+        <div class="splash-footer">Powered by bunq · Albert Heijn · Anthropic</div>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HOME SCREEN ── -->
+  <div class="screen-wrap">
+    <span class="screen-label">Screen 1 — Home</span>
+    <div class="iphone">
+      <div class="home-screen">
+
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <span style="font-size:11px;">●●●</span>
+            <span>▮▮</span>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div class="home-header">
+          <div>
+            <div class="greeting-small">Good morning</div>
+            <div class="greeting-main">Hey Sai 👋</div>
+          </div>
+          <div class="avatar">S</div>
+        </div>
+
+        <!-- Scrollable content -->
+        <div class="home-content">
+
+          <!-- Calorie card -->
+          <div class="cal-card">
+            <div class="cal-card-header">
+              <span class="cal-label">Today's calories</span>
+            </div>
+            <div class="cal-numbers">820 <span>/ 1,800 kcal</span></div>
+            <div class="progress-track">
+              <div class="progress-fill"></div>
+            </div>
+            <div class="macro-row">
+              <div class="macro-pill macro-p">P 45g</div>
+              <div class="macro-pill macro-c">C 82g</div>
+              <div class="macro-pill macro-f">F 28g</div>
+            </div>
+          </div>
+
+          <!-- Today's meals -->
+          <div>
+            <div class="section-head">
+              <span class="section-title">Today's meals</span>
+              <span class="section-action">Edit</span>
+            </div>
+            <div class="meals-row">
+
+              <!-- Breakfast -->
+              <div class="meal-card">
+                <div class="meal-img meal-img-breakfast" style="position:relative;">
+                  <span style="position:relative;z-index:1;">🍳</span>
+                  <div class="meal-tag" style="position:absolute;">Breakfast</div>
+                </div>
+                <div class="meal-info">
+                  <div class="meal-name">Greek Yogurt Bowl</div>
+                  <div class="meal-kcal"><strong>320</strong> kcal</div>
+                </div>
+              </div>
+
+              <!-- Lunch -->
+              <div class="meal-card">
+                <div class="meal-img meal-img-lunch" style="position:relative;">
+                  <span style="position:relative;z-index:1;">🥗</span>
+                  <div class="meal-tag" style="position:absolute;">Lunch</div>
+                </div>
+                <div class="meal-info">
+                  <div class="meal-name">Chicken Quinoa Salad</div>
+                  <div class="meal-kcal"><strong>480</strong> kcal</div>
+                </div>
+              </div>
+
+              <!-- Dinner -->
+              <div class="meal-card">
+                <div class="meal-img meal-img-dinner" style="position:relative;">
+                  <span style="position:relative;z-index:1;">🍽️</span>
+                  <div class="meal-tag" style="position:absolute;">Dinner</div>
+                </div>
+                <div class="meal-info">
+                  <div class="meal-name">Not planned yet</div>
+                  <div class="meal-kcal" style="color:#34C759;">+ Add dinner →</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Insight nudge -->
+          <div class="insight-card">
+            <div class="insight-icon">⚡</div>
+            <div class="insight-text">
+              <strong>300g of protein short</strong> this week.<br />
+              Add a high-protein dinner to close the gap.
+            </div>
+          </div>
+
+          <!-- Delivery banner -->
+          <div class="delivery-banner">
+            <div class="delivery-dot"></div>
+            <div class="delivery-text">
+              <div class="delivery-title">AH delivery arriving today</div>
+              <div class="delivery-sub">14:00 – 16:00 · 6 items</div>
+            </div>
+            <div class="delivery-arrow">›</div>
+          </div>
+
+        </div>
+
+        <!-- CTA button -->
+        <div class="cta-area">
+          <div class="cta-btn">
+            <span>🎤</span>
+            Plan something
+          </div>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SCREEN 2: AI CHAT / VOICE ── -->
+  <div class="screen-wrap">
+    <span class="screen-label">Screen 2 — AI / Voice</span>
+    <div class="iphone">
+      <div class="chat-screen">
+
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <span style="font-size:11px;">●●●</span>
+            <span>▮▮</span>
+          </div>
+        </div>
+
+        <!-- Screen title -->
+        <div style="padding: 8px 20px 10px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:20px; font-weight:700; color:#fff; letter-spacing:-0.4px;">Plan a meal</div>
+          <div style="font-size:13px; color:#34C759; font-weight:500;">Clear</div>
+        </div>
+
+        <!-- Chat messages -->
+        <div class="chat-messages">
+
+          <div class="chat-context-pill">High-protein · under 600 kcal</div>
+
+          <!-- User message -->
+          <div class="bubble bubble-user">
+            <div class="bubble-text">Something high-protein under 600 calories, quick to make</div>
+            <div class="bubble-time">9:38</div>
+          </div>
+
+          <!-- AI text reply -->
+          <div class="bubble bubble-ai">
+            <div class="bubble-text">Got it — high-protein, under 600 kcal, quick prep. Here are 3 options I picked for you 👇</div>
+          </div>
+
+          <!-- Recipe card 1 (featured) -->
+          <div class="chat-recipe-card">
+            <div class="chat-recipe-img">
+              🍗
+              <div class="ai-badge">AI Image</div>
+            </div>
+            <div class="chat-recipe-body">
+              <div class="chat-recipe-name">Chicken & Feta Rice Bowl</div>
+              <div class="chat-recipe-meta">
+                <span><strong>540</strong> kcal</span>
+                <span><strong>48g</strong> protein</span>
+                <span>⏱ 18 min</span>
+              </div>
+              <div class="chat-recipe-tags">
+                <span class="recipe-tag tag-protein">High-Protein</span>
+                <span class="recipe-tag tag-quick">Quick</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recipe card 2 (compact) -->
+          <div class="chat-recipe-card" style="display:flex; align-items:center; max-width:88%;">
+            <div style="width:64px; height:64px; background:linear-gradient(135deg,#1a1030,#2e1a50); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; margin:10px;">🥩</div>
+            <div style="padding:10px 12px 10px 0; flex:1;">
+              <div style="font-size:14px; font-weight:600; color:#fff; margin-bottom:4px;">Beef Stir-Fry & Broccoli</div>
+              <div style="display:flex; gap:10px;">
+                <span style="font-size:12px; color:#5a7060;"><strong style="color:#34C759;">520</strong> kcal</span>
+                <span style="font-size:12px; color:#5a7060;">⏱ 15 min</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typing indicator (AI thinking) -->
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+
+        </div>
+
+        <!-- Voice / text input bar -->
+        <div class="voice-bar">
+          <div class="text-input-mock">
+            <span>💬</span>
+            Ask anything…
+          </div>
+          <div class="mic-btn">🎤</div>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 3: RECIPE SELECTION ── -->
+  <div class="screen-wrap">
+    <span class="screen-label">Screen 3 — Recipe Selection</span>
+    <div class="iphone">
+      <div class="recipe-screen">
+
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <span style="font-size:11px;">●●●</span>
+            <span>▮▮</span>
+          </div>
+        </div>
+
+        <!-- Header -->
+        <div class="recipe-screen-header">
+          <div class="recipe-screen-back">‹ Back to chat</div>
+          <div class="recipe-screen-title">Choose a recipe</div>
+          <div class="recipe-screen-sub">High-protein · under 600 kcal · for 1 person</div>
+        </div>
+
+        <!-- Filter chips -->
+        <div class="filter-row">
+          <div class="filter-chip active">All</div>
+          <div class="filter-chip">High-Protein</div>
+          <div class="filter-chip">Keto</div>
+          <div class="filter-chip">Under 30 min</div>
+          <div class="filter-chip">Vegan</div>
+        </div>
+
+        <!-- Recipe cards list -->
+        <div class="recipe-list">
+
+          <!-- Card 1 — featured / best match -->
+          <div class="recipe-big-card featured">
+            <div class="recipe-big-img rimg-1">
+              🍗
+              <div class="recipe-best-badge">Best Match</div>
+              <div class="recipe-kcal-badge">540 kcal</div>
+            </div>
+            <div class="recipe-big-body">
+              <div class="recipe-big-name">Chicken & Feta Rice Bowl</div>
+              <div class="recipe-big-meta">
+                <span>⏱ <strong>18 min</strong></span>
+                <span>💪 <strong>48g protein</strong></span>
+                <span>👤 <strong>1 serving</strong></span>
+              </div>
+              <div class="recipe-big-tags">
+                <span class="recipe-tag tag-protein">High-Protein</span>
+                <span class="recipe-tag tag-quick">Quick</span>
+              </div>
+              <div class="recipe-select-btn">Select this recipe →</div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="recipe-big-card">
+            <div class="recipe-big-img rimg-2">
+              🥩
+              <div class="recipe-kcal-badge">520 kcal</div>
+            </div>
+            <div class="recipe-big-body">
+              <div class="recipe-big-name">Beef Stir-Fry & Broccoli</div>
+              <div class="recipe-big-meta">
+                <span>⏱ <strong>15 min</strong></span>
+                <span>💪 <strong>44g protein</strong></span>
+                <span>👤 <strong>1 serving</strong></span>
+              </div>
+              <div class="recipe-big-tags">
+                <span class="recipe-tag tag-protein">High-Protein</span>
+                <span class="recipe-tag tag-keto">Keto</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="recipe-big-card">
+            <div class="recipe-big-img rimg-3">
+              🐟
+              <div class="recipe-kcal-badge">490 kcal</div>
+            </div>
+            <div class="recipe-big-body">
+              <div class="recipe-big-name">Salmon with Asparagus</div>
+              <div class="recipe-big-meta">
+                <span>⏱ <strong>22 min</strong></span>
+                <span>💪 <strong>42g protein</strong></span>
+                <span>👤 <strong>1 serving</strong></span>
+              </div>
+              <div class="recipe-big-tags">
+                <span class="recipe-tag tag-protein">High-Protein</span>
+                <span class="recipe-tag tag-keto">Keto</span>
+                <span class="recipe-tag tag-quick">Omega-3</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="recipe-big-card">
+            <div class="recipe-big-img rimg-4">
+              🍳
+              <div class="recipe-kcal-badge">380 kcal</div>
+            </div>
+            <div class="recipe-big-body">
+              <div class="recipe-big-name">Egg White Omelette & Spinach</div>
+              <div class="recipe-big-meta">
+                <span>⏱ <strong>10 min</strong></span>
+                <span>💪 <strong>36g protein</strong></span>
+                <span>👤 <strong>1 serving</strong></span>
+              </div>
+              <div class="recipe-big-tags">
+                <span class="recipe-tag tag-protein">High-Protein</span>
+                <span class="recipe-tag tag-quick">Quick</span>
+                <span class="recipe-tag tag-keto">Low-Carb</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SCREEN 4: ORDER & CHECKOUT ── -->
+  <div class="screen-wrap">
+    <span class="screen-label">Screen 4 — Order &amp; Checkout</span>
+    <div class="iphone">
+      <div class="order-screen">
+
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons"><span style="font-size:11px;">●●●</span><span>▮▮</span></div>
+        </div>
+
+        <div class="order-screen-header">
+          <div class="order-back">‹ Chicken &amp; Feta Rice Bowl</div>
+          <div class="order-title">Order ingredients</div>
+          <div class="order-sub">Scaled for 1 person · 8 items</div>
+        </div>
+
+        <!-- Store tabs -->
+        <div class="store-tabs">
+          <div class="store-tab active">Albert Heijn</div>
+          <div class="store-tab">Jumbo</div>
+          <div class="store-tab">Picnic</div>
+        </div>
+
+        <div class="ingredient-list">
+
+          <div class="ingredient-section-label">To order (6 items)</div>
+
+          <div class="ingredient-row">
+            <div class="ingredient-check check-no"></div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Chicken breast</div>
+              <div class="ingredient-qty">200g</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="product-name">AH Kipfilet 500g</div>
+              <div class="product-price">€4.99</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="ingredient-check check-no"></div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Feta cheese</div>
+              <div class="ingredient-qty">50g</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="product-name">AH Feta Griekse kaas</div>
+              <div class="product-price">€2.29</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="ingredient-check check-no"></div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Brown rice</div>
+              <div class="ingredient-qty">80g</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="product-name">AH Zilvervliesrijst 500g</div>
+              <div class="product-price">€1.89</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="ingredient-check check-no"></div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Cherry tomatoes</div>
+              <div class="ingredient-qty">100g</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="product-name">AH Cherrytomaatjes 250g</div>
+              <div class="product-price">€1.49</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="ingredient-check check-no"></div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Cucumber</div>
+              <div class="ingredient-qty">½ piece</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="product-name">AH Komkommer</div>
+              <div class="product-price">€0.89</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row">
+            <div class="ingredient-check check-no"></div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Lemon</div>
+              <div class="ingredient-qty">1 piece</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="product-name">AH Citroen</div>
+              <div class="product-price">€0.59</div>
+            </div>
+          </div>
+
+          <div class="ingredient-section-label">Already in pantry (2 items)</div>
+
+          <div class="ingredient-row have-it">
+            <div class="ingredient-check check-yes">✓</div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Olive oil</div>
+              <div class="ingredient-qty">15ml</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="have-it-badge">You have it</div>
+            </div>
+          </div>
+
+          <div class="ingredient-row have-it">
+            <div class="ingredient-check check-yes">✓</div>
+            <div class="ingredient-info">
+              <div class="ingredient-name">Salt &amp; pepper</div>
+              <div class="ingredient-qty">to taste</div>
+            </div>
+            <div class="ingredient-product">
+              <div class="have-it-badge">You have it</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Delivery time -->
+        <div class="delivery-select">
+          <div class="delivery-select-left">
+            <span class="delivery-select-label">Delivery</span>
+            <div class="delivery-options">
+              <div class="delivery-option active">Today</div>
+              <div class="delivery-option">Tomorrow</div>
+              <div class="delivery-option">Pick date</div>
+            </div>
+          </div>
+          <div style="font-size:13px; color:#34C759; font-weight:500;">14:00–16:00 ›</div>
+        </div>
+
+        <!-- Total + bunq pay -->
+        <div class="order-footer">
+          <div class="order-total-row">
+            <div>
+              <div class="order-total-label">Total</div>
+              <div class="order-total-items">6 items · AH delivery</div>
+            </div>
+            <div class="order-total-amount">€12.14</div>
+          </div>
+          <div class="bunq-btn">
+            <div class="bunq-logo">bunq</div>
+            Pay €12.14
+          </div>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 5: NUTRITION TRACKER ── -->
+  <div class="screen-wrap">
+    <span class="screen-label">Screen 5 — Nutrition Tracker</span>
+    <div class="iphone">
+      <div class="nutrition-screen">
+
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons"><span style="font-size:11px;">●●●</span><span>▮▮</span></div>
+        </div>
+
+        <div class="nutrition-header">
+          <div>
+            <div class="nutrition-title">Nutrition</div>
+            <div class="nutrition-date">Friday, 25 April</div>
+          </div>
+          <div class="week-btn">This week ›</div>
+        </div>
+
+        <div class="nutrition-content">
+
+          <!-- Calorie ring + macro bars -->
+          <div class="calorie-ring-card">
+            <div class="ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 100 100">
+                <circle class="ring-track" cx="50" cy="50" r="40"/>
+                <circle class="ring-fill"  cx="50" cy="50" r="40"/>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-num">820</div>
+                <div class="ring-unit">/ 1800 kcal</div>
+              </div>
+            </div>
+            <div class="ring-stats">
+              <div class="ring-stat-row">
+                <div class="ring-stat-head">
+                  <span class="ring-stat-label">Protein</span>
+                  <span class="ring-stat-val val-protein">45 / 140g</span>
+                </div>
+                <div class="ring-bar"><div class="ring-bar-fill bar-protein"></div></div>
+              </div>
+              <div class="ring-stat-row">
+                <div class="ring-stat-head">
+                  <span class="ring-stat-label">Carbs</span>
+                  <span class="ring-stat-val val-carbs">82 / 180g</span>
+                </div>
+                <div class="ring-bar"><div class="ring-bar-fill bar-carbs"></div></div>
+              </div>
+              <div class="ring-stat-row">
+                <div class="ring-stat-head">
+                  <span class="ring-stat-label">Fat</span>
+                  <span class="ring-stat-val val-fat">28 / 60g</span>
+                </div>
+                <div class="ring-bar"><div class="ring-bar-fill bar-fat"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weekly bar chart -->
+          <div class="week-chart-card">
+            <div class="week-chart-head">
+              <span class="week-chart-title">This week</span>
+              <span class="week-chart-avg">Avg 1,540 kcal</span>
+            </div>
+            <div class="week-bars">
+              <div class="week-bar-wrap">
+                <div class="week-bar on-track" style="height:48px;"></div>
+                <div class="week-bar-day">Mon</div>
+              </div>
+              <div class="week-bar-wrap">
+                <div class="week-bar on-track" style="height:52px;"></div>
+                <div class="week-bar-day">Tue</div>
+              </div>
+              <div class="week-bar-wrap">
+                <div class="week-bar over" style="height:60px;"></div>
+                <div class="week-bar-day">Wed</div>
+              </div>
+              <div class="week-bar-wrap">
+                <div class="week-bar on-track" style="height:44px;"></div>
+                <div class="week-bar-day">Thu</div>
+              </div>
+              <div class="week-bar-wrap">
+                <div class="week-bar today" style="height:28px;"></div>
+                <div class="week-bar-day today-lbl">Fri</div>
+              </div>
+              <div class="week-bar-wrap">
+                <div class="week-bar on-track" style="height:4px; opacity:0.2;"></div>
+                <div class="week-bar-day">Sat</div>
+              </div>
+              <div class="week-bar-wrap">
+                <div class="week-bar on-track" style="height:4px; opacity:0.2;"></div>
+                <div class="week-bar-day">Sun</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Insight banner -->
+          <div class="insight-card">
+            <div class="insight-icon">🎯</div>
+            <div class="insight-text">
+              <strong>On track 3 of 4 days</strong> this week.<br/>
+              Protein is consistently low — add 1 high-protein dinner.
+            </div>
+          </div>
+
+          <!-- Today's meal log -->
+          <div>
+            <div class="section-head">
+              <span class="section-title">Today's log</span>
+              <span class="section-action">+ Add</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+
+              <div class="meal-log-item">
+                <div class="meal-log-img log-img-1">🍳</div>
+                <div class="meal-log-info">
+                  <div class="meal-log-name">Greek Yogurt Bowl</div>
+                  <div class="meal-log-time">Breakfast · 8:15</div>
+                </div>
+                <div class="meal-log-kcal">
+                  <div class="meal-log-num">320</div>
+                  <div class="meal-log-unit">kcal</div>
+                </div>
+              </div>
+
+              <div class="meal-log-item">
+                <div class="meal-log-img log-img-2">🥗</div>
+                <div class="meal-log-info">
+                  <div class="meal-log-name">Chicken Quinoa Salad</div>
+                  <div class="meal-log-time">Lunch · 13:00</div>
+                </div>
+                <div class="meal-log-kcal">
+                  <div class="meal-log-num">500</div>
+                  <div class="meal-log-unit">kcal</div>
+                </div>
+              </div>
+
+              <div class="meal-log-item" style="border: 1px dashed rgba(52,199,89,0.2); background:transparent;">
+                <div class="meal-log-img" style="background:rgba(52,199,89,0.08); border-radius:10px; color:#34C759; font-size:20px;">+</div>
+                <div class="meal-log-info">
+                  <div class="meal-log-name" style="color:#34C759;">Log dinner</div>
+                  <div class="meal-log-time">Not logged yet</div>
+                </div>
+                <div class="meal-log-kcal">
+                  <div class="meal-log-num" style="color:#3d5040;">—</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── SCREEN 6: PROFILE & GOALS ── -->
+  <div class="screen-wrap">
+    <span class="screen-label">Screen 6 — Profile &amp; Goals</span>
+    <div class="iphone">
+      <div class="profile-screen">
+
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons"><span style="font-size:11px;">●●●</span><span>▮▮</span></div>
+        </div>
+
+        <div class="profile-header">
+          <div class="profile-title">Profile</div>
+          <div class="profile-save">Save</div>
+        </div>
+
+        <div class="profile-content">
+
+          <!-- Avatar row -->
+          <div class="profile-avatar-row">
+            <div class="profile-avatar-big">S</div>
+            <div class="profile-name-block">
+              <div class="profile-name">Sai Maniraj</div>
+              <div class="profile-email">maniraj.sai@security-tools.nl</div>
+            </div>
+            <div class="profile-edit-btn">Edit</div>
+          </div>
+
+          <!-- Diet type -->
+          <div class="profile-group">
+            <div class="profile-group-label">Diet type</div>
+            <div class="diet-grid">
+              <div class="diet-pill">
+                <span class="diet-pill-icon">🥦</span>Balanced
+              </div>
+              <div class="diet-pill active">
+                <span class="diet-pill-icon">💪</span>High-Protein
+              </div>
+              <div class="diet-pill">
+                <span class="diet-pill-icon">🥑</span>Keto
+              </div>
+              <div class="diet-pill">
+                <span class="diet-pill-icon">🌿</span>Vegan
+              </div>
+              <div class="diet-pill">
+                <span class="diet-pill-icon">🥩</span>Paleo
+              </div>
+              <div class="diet-pill">
+                <span class="diet-pill-icon">✏️</span>Custom
+              </div>
+            </div>
+          </div>
+
+          <!-- Goals -->
+          <div class="profile-group">
+            <div class="profile-group-label">Daily goals</div>
+
+            <div class="setting-row">
+              <div class="setting-row-left">
+                <div class="setting-row-icon icon-cal">🔥</div>
+                <div>
+                  <div class="setting-label">Calorie target</div>
+                  <div class="setting-sub">Auto-adjusts on activity</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div class="setting-value">1,800 kcal</div>
+                <div class="setting-chevron">›</div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-row-left">
+                <div class="setting-row-icon icon-macro">📊</div>
+                <div>
+                  <div class="setting-label">Macro split</div>
+                  <div class="setting-sub">High-Protein preset</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div class="setting-value" style="font-size:12px;">40P · 35C · 25F</div>
+                <div class="setting-chevron">›</div>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-row-left">
+                <div class="setting-row-icon icon-size">👥</div>
+                <div>
+                  <div class="setting-label">Household size</div>
+                  <div class="setting-sub">Default serving scale</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div class="setting-value">1 person</div>
+                <div class="setting-chevron">›</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Allergies -->
+          <div class="profile-group">
+            <div class="profile-group-label">Allergies &amp; intolerances</div>
+            <div class="allergy-row">
+              <div class="allergy-tag allergy-active">🥜 Peanuts</div>
+              <div class="allergy-tag allergy-active">🌾 Gluten</div>
+              <div class="allergy-tag allergy-inactive">🥛 Dairy</div>
+              <div class="allergy-tag allergy-inactive">🥚 Eggs</div>
+              <div class="allergy-tag allergy-inactive">🐚 Shellfish</div>
+              <div class="allergy-tag allergy-inactive" style="color:#34C759; border-color:rgba(52,199,89,0.3);">+ Add</div>
+            </div>
+          </div>
+
+          <!-- bunq connected -->
+          <div class="profile-group">
+            <div class="profile-group-label">Payment</div>
+            <div class="bunq-connected">
+              <div class="bunq-icon">b</div>
+              <div class="bunq-connected-info">
+                <div class="bunq-connected-name">bunq — Personal account</div>
+                <div class="bunq-connected-sub">••••  ••••  ••••  4821</div>
+              </div>
+              <div class="bunq-connected-dot"></div>
+            </div>
+          </div>
+
+          <!-- Danger zone -->
+          <div class="setting-row" style="margin-top:4px;">
+            <div class="setting-row-left">
+              <div class="setting-row-icon" style="background:rgba(255,60,60,0.1);">🚪</div>
+              <div class="setting-label" style="color:#ff5050;">Sign out</div>
+            </div>
+            <div class="setting-chevron">›</div>
+          </div>
+
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
