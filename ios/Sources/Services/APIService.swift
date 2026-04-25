@@ -24,8 +24,8 @@ class APIService {
     static let shared = APIService()
     private init() {}
 
-    var baseURL = "http://localhost:4567"
-    var useMockData = true
+    var baseURL = "http://107.20.41.184:4567"
+    var useMockData = false
 
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
