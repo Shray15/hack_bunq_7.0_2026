@@ -24,7 +24,8 @@
       "Bash(docker exec *)",
       "Bash(docker stop *)",
       "Bash(docker rm *)",
-      "Bash(grep \"\\\\.py$\")"
+      "Bash(grep \"\\\\.py$\")",
+      "Bash(grep \"\\\\.swift$\")"
     ]
   }
 }

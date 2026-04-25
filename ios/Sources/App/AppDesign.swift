@@ -175,19 +175,35 @@ struct RemoteImageView<Placeholder: View>: View {
     var body: some View {
         Color.clear
             .overlay {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    default:
-                        placeholder
+                if let url, url.scheme == "data",
+                   let uiImage = decodeDataURL(url) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        default:
+                            placeholder
+                        }
                     }
                 }
             }
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
+    private func decodeDataURL(_ url: URL) -> UIImage? {
+        // data:image/png;base64,<payload>
+        let raw = url.absoluteString
+        guard let commaIndex = raw.firstIndex(of: ",") else { return nil }
+        let payload = String(raw[raw.index(after: commaIndex)...])
+        guard let data = Data(base64Encoded: payload, options: .ignoreUnknownCharacters) else { return nil }
+        return UIImage(data: data)
     }
 }
 
