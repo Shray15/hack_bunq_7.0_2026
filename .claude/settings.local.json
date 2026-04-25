@@ -31,12 +31,8 @@
       "Bash(awk '/_stream_response/,/^    async def [a-z]/' backend/.venv/lib/python3.12/site-packages/sse_starlette/sse.py)",
       "Bash(xcodebuild -project CookingCompanion.xcodeproj -scheme CookingCompanion -destination 'generic/platform=iOS Simulator' -quiet build)",
       "Bash(git mv *)",
-      "Bash(git *)",
-      "Bash(awk 'NR>=2630 && NR<=2900' /Users/rohityadav/.cache/uv/sdists-v9/pypi/bunq-sdk/1.28.0/gGpAMpOUiuKJ_tgArZ4qE/src/bunq/sdk/model/generated/endpoint.py)",
-      "Bash(awk 'NR>=6393 && NR<=6550' /Users/rohityadav/.cache/uv/sdists-v9/pypi/bunq-sdk/1.28.0/gGpAMpOUiuKJ_tgArZ4qE/src/bunq/sdk/model/generated/endpoint.py)",
-      "Bash(awk 'NR>=7317 && NR<=7500' /Users/rohityadav/.cache/uv/sdists-v9/pypi/bunq-sdk/1.28.0/gGpAMpOUiuKJ_tgArZ4qE/src/bunq/sdk/model/generated/endpoint.py)",
-      "Bash(awk -F: 'NR>=1 && $2>=6393 && $2<=6600')",
-      "Bash(awk -F: 'NR>=1 && $2>=7317 && $2<=7550')"
+      "Bash(git checkout *)",
+      "Bash(git stash *)"
     ]
   }
 }
