@@ -2,7 +2,6 @@ from typing import Final
 
 
 class EventName:
-    RECIPE_TOKEN: Final = "recipe_token"
     RECIPE_COMPLETE: Final = "recipe_complete"
     IMAGE_READY: Final = "image_ready"
     CART_READY: Final = "cart_ready"

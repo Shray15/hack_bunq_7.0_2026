@@ -29,7 +29,7 @@ class Order(AppModel):
 
 
 class CheckoutRequest(AppModel):
-    store: Store
+    cart_id: uuid.UUID
 
 
 class CheckoutResponse(AppModel):

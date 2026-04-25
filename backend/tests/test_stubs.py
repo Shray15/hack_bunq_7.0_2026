@@ -41,18 +41,43 @@ async def test_recipes_generate_returns_recipe(client: AsyncClient) -> None:
 async def test_cart_from_recipe_returns_comparison(client: AsyncClient) -> None:
     headers = await _auth(client)
     rid = str(uuid.uuid4())
-    resp = await client.post("/cart/from-recipe", json={"recipe_id": rid}, headers=headers)
+    resp = await client.post(
+        "/cart/from-recipe", json={"recipe_id": rid, "people": 2}, headers=headers
+    )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["recipe_id"] == rid
+    assert "cart_id" in body
+    # Phase 1.5: comparison-only response, no items list.
+    assert "items" not in body
     stores = {row["store"] for row in body["comparison"]}
-    assert stores == {"ah", "jumbo", "picnic"}
+    assert stores == {"ah", "picnic"}
+    for row in body["comparison"]:
+        assert "missing_count" in row
+        assert row["missing_count"] == len(row["missing"])
+
+
+async def test_select_store_returns_items(client: AsyncClient) -> None:
+    headers = await _auth(client)
+    cart_id = str(uuid.uuid4())
+    resp = await client.post(
+        f"/cart/{cart_id}/select-store", json={"store": "ah"}, headers=headers
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["selected_store"] == "ah"
+    assert body["items"]
+    for item in body["items"]:
+        assert item["store"] == "ah"
+        assert item["image_url"]
 
 
 async def test_checkout_returns_payment_url(client: AsyncClient) -> None:
     headers = await _auth(client)
     cart_id = str(uuid.uuid4())
-    resp = await client.post(f"/cart/{cart_id}/checkout", json={"store": "ah"}, headers=headers)
+    resp = await client.post(
+        "/order/checkout", json={"cart_id": cart_id}, headers=headers
+    )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["payment_url"].startswith("https://")

@@ -33,8 +33,14 @@ class Settings(BaseSettings):
     agentcore_memory_role_arn: str = ""
 
     gemini_api_key: str = ""
+    gemini_image_model: str = "gemini-2.5-flash-image-preview"
     bunq_api_key: str = ""
     bunq_installation_token: str = ""
+
+    bedrock_max_tokens: int = 1024
+    bedrock_timeout_seconds: float = 30.0
+    gemini_timeout_seconds: float = 8.0
+    chat_rate_limit_per_minute: int = 5
 
     @property
     def is_production(self) -> bool:

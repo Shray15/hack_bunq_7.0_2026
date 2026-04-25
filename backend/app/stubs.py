@@ -62,52 +62,75 @@ def make_recipe(*, recipe_id: uuid.UUID | None = None, name: str = "Lemon Herb C
     )
 
 
-def make_cart(*, recipe_id: uuid.UUID, cart_id: uuid.UUID | None = None) -> Cart:
-    cid = cart_id or uuid.uuid4()
-    items: list[CartItem] = [
+def make_cart_items(*, store: Store = "ah") -> list[CartItem]:
+    return [
         CartItem(
             id=uuid.uuid4(),
             ingredient_name="chicken breast",
-            store="ah",
-            product_id="ah-7421",
-            product_name="AH Kipfilet 500g",
+            store=store,
+            product_id=f"{store}-7421",
+            product_name="Kipfilet 500g",
+            image_url="https://placehold.co/240x240/png?text=Kipfilet",
             qty=1,
+            unit="500 g",
             unit_price_eur=6.99,
             total_price_eur=6.99,
         ),
         CartItem(
             id=uuid.uuid4(),
             ingredient_name="jasmine rice",
-            store="ah",
-            product_id="ah-1102",
-            product_name="AH Jasmijnrijst 1kg",
+            store=store,
+            product_id=f"{store}-1102",
+            product_name="Jasmijnrijst 1kg",
+            image_url="https://placehold.co/240x240/png?text=Rice",
             qty=1,
+            unit="1 kg",
             unit_price_eur=2.49,
             total_price_eur=2.49,
         ),
         CartItem(
             id=uuid.uuid4(),
             ingredient_name="lemon",
-            store="ah",
-            product_id="ah-9001",
-            product_name="AH Citroen los",
+            store=store,
+            product_id=f"{store}-9001",
+            product_name="Citroen los",
+            image_url="https://placehold.co/240x240/png?text=Lemon",
             qty=1,
+            unit="1 pc",
             unit_price_eur=0.45,
             total_price_eur=0.45,
         ),
     ]
-    comparison = [
-        StoreComparison(store="ah", total_eur=12.83, missing=[], item_count=6),
-        StoreComparison(store="jumbo", total_eur=11.97, missing=[], item_count=6),
-        StoreComparison(store="picnic", total_eur=13.20, missing=["parsley"], item_count=5),
+
+
+def make_comparison() -> list[StoreComparison]:
+    return [
+        StoreComparison(
+            store="ah",
+            total_eur=13.45,
+            item_count=6,
+            missing=[],
+            missing_count=0,
+        ),
+        StoreComparison(
+            store="picnic",
+            total_eur=12.97,
+            item_count=5,
+            missing=["parsley"],
+            missing_count=1,
+        ),
     ]
+
+
+def make_cart(*, recipe_id: uuid.UUID, cart_id: uuid.UUID | None = None) -> Cart:
+    cid = cart_id or uuid.uuid4()
     return Cart(
         id=cid,
         recipe_id=recipe_id,
         status="open",
         selected_store=None,
-        comparison=comparison,
-        items=items,
+        comparison=make_comparison(),
+        items=make_cart_items(store="ah"),
         created_at=_now(),
     )
 

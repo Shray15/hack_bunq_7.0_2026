@@ -57,7 +57,7 @@ def upgrade() -> None:
             "store_priority",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=False,
-            server_default=sa.text("""'["ah","jumbo","picnic"]'::jsonb"""),
+            server_default=sa.text("""'["ah","picnic"]'::jsonb"""),
         ),
         sa.Column(
             "extra",

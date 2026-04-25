@@ -45,11 +45,12 @@ async def test_chat_publishes_canned_event_sequence(client: AsyncClient) -> None
 
     await asyncio.wait_for(consumer_task, timeout=10.0)
 
-    assert "recipe_token" in seen
     assert "recipe_complete" in seen
     assert "image_ready" in seen
     # recipe_complete must arrive before image_ready
     assert seen.index("recipe_complete") < seen.index("image_ready")
+    # Token streaming was retired in Phase 1.5 — recipe lands as one event.
+    assert "recipe_token" not in seen
 
 
 async def test_hub_fanout_to_multiple_subscribers() -> None:

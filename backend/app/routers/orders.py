@@ -14,11 +14,11 @@ from app.stubs import make_order
 router = APIRouter(tags=["orders"])
 
 
-@router.post("/cart/{cart_id}/checkout", response_model=CheckoutResponse)
-async def checkout(
-    cart_id: uuid.UUID, payload: CheckoutRequest, user_id: CurrentUserId
-) -> CheckoutResponse:
-    order = make_order(cart_id=cart_id, store=payload.store)
+@router.post("/order/checkout", response_model=CheckoutResponse)
+async def checkout(payload: CheckoutRequest, user_id: CurrentUserId) -> CheckoutResponse:
+    # Phase 1.5 stub: store is always "ah" until cart_flow persists selection.
+    # Phase 3 will read cart.selected_store from the DB.
+    order = make_order(cart_id=payload.cart_id, store="ah")
     await hub.publish(
         user_id,
         EventName.ORDER_STATUS,

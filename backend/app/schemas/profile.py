@@ -8,7 +8,7 @@ class Profile(AppModel):
     protein_g_target: int | None = None
     carbs_g_target: int | None = None
     fat_g_target: int | None = None
-    store_priority: list[str] = ["ah", "jumbo", "picnic"]
+    store_priority: list[str] = ["ah", "picnic"]
 
 
 class ProfileUpdate(AppModel):
