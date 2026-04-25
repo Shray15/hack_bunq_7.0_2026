@@ -17,6 +17,11 @@ class HomeViewModel: ObservableObject {
 
     init() { loadMock() }
 
+    func refresh() async {
+        try? await Task.sleep(nanoseconds: 600_000_000)
+        loadMock()
+    }
+
     private func loadMock() {
         plannedMeals = [
             PlannedMeal(slot: "Breakfast", recipe: nil,                    calories: 380),
