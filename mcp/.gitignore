@@ -1,0 +1,5 @@
+venv/
+.env
+bunq_sandbox.conf
+__pycache__/
+*.pyc
