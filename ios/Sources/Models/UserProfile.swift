@@ -7,6 +7,32 @@ enum DietType: String, CaseIterable, Codable {
     case paleo       = "Paleo"
     case vegan       = "Vegan"
     case custom      = "Custom"
+
+    /// Lowercase identifier the backend uses on the wire.
+    var backendString: String {
+        switch self {
+        case .balanced:    return "balanced"
+        case .highProtein: return "high-protein"
+        case .keto:        return "keto"
+        case .paleo:       return "paleo"
+        case .vegan:       return "vegan"
+        case .custom:      return "custom"
+        }
+    }
+
+    /// Lenient inverse: accepts any sane casing or hyphenation the backend might emit.
+    static func fromBackend(_ raw: String) -> DietType? {
+        let normalized = raw.lowercased().replacingOccurrences(of: "_", with: "-")
+        switch normalized {
+        case "balanced":                              return .balanced
+        case "high-protein", "highprotein":           return .highProtein
+        case "keto":                                  return .keto
+        case "paleo":                                 return .paleo
+        case "vegan":                                 return .vegan
+        case "custom":                                return .custom
+        default:                                      return nil
+        }
+    }
 }
 
 enum BiologicalSex: String, CaseIterable, Codable {
@@ -125,6 +151,28 @@ struct UserProfile: Codable {
     var biologicalSex: BiologicalSex = .male
     var goal: NutritionGoal      = .maintain
     var activityLevel: ActivityLevel = .moderate
+}
+
+/// Wire shape of `GET /user/profile` and `PATCH /user/profile`. Every field is
+/// optional so PATCH can send a partial document.
+struct BackendUserProfile: Codable, Hashable {
+    var diet: String?
+    var allergies: [String]?
+    var dailyCalorieTarget: Int?
+    var proteinGTarget: Int?
+    var carbsGTarget: Int?
+    var fatGTarget: Int?
+    var storePriority: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case diet
+        case allergies
+        case dailyCalorieTarget = "daily_calorie_target"
+        case proteinGTarget     = "protein_g_target"
+        case carbsGTarget       = "carbs_g_target"
+        case fatGTarget         = "fat_g_target"
+        case storePriority      = "store_priority"
+    }
 }
 
 struct WeightEntry: Identifiable, Codable, Hashable {

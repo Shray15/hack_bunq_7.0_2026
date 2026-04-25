@@ -15,17 +15,17 @@ final class AppState: ObservableObject {
     private static let waterByDateKey      = "water_by_date_v1"
 
     @Published var displayName: String = "Sai"
-    @Published var dietType: DietType = .balanced
+    @Published var dietType: DietType = .balanced { didSet { schedulePatchIfChanged(dietType, oldValue) } }
     @Published var householdSize: Int = 1
 
     // MARK: - Body stats & goal (persisted)
 
-    @Published var bodyweightKg: Double = 70 { didSet { persistBodyStats() } }
-    @Published var heightCm: Double = 175 { didSet { persistBodyStats() } }
-    @Published var age: Int = 30 { didSet { persistBodyStats() } }
-    @Published var biologicalSex: BiologicalSex = .male { didSet { persistBodyStats() } }
-    @Published var goal: NutritionGoal = .maintain { didSet { persistBodyStats() } }
-    @Published var activityLevel: ActivityLevel = .moderate { didSet { persistBodyStats() } }
+    @Published var bodyweightKg: Double = 70 { didSet { persistBodyStats(); schedulePatchIfChanged(bodyweightKg, oldValue) } }
+    @Published var heightCm: Double = 175 { didSet { persistBodyStats(); schedulePatchIfChanged(heightCm, oldValue) } }
+    @Published var age: Int = 30 { didSet { persistBodyStats(); schedulePatchIfChanged(age, oldValue) } }
+    @Published var biologicalSex: BiologicalSex = .male { didSet { persistBodyStats(); schedulePatchIfChanged(biologicalSex, oldValue) } }
+    @Published var goal: NutritionGoal = .maintain { didSet { persistBodyStats(); schedulePatchIfChanged(goal, oldValue) } }
+    @Published var activityLevel: ActivityLevel = .moderate { didSet { persistBodyStats(); schedulePatchIfChanged(activityLevel, oldValue) } }
 
     // MARK: - Library & meal state
 
@@ -47,6 +47,13 @@ final class AppState: ObservableObject {
     @Published private(set) var waterByDate: [String: Int] = [:] {
         didSet { persistWaterLog() }
     }
+
+    // MARK: - Backend profile sync state
+
+    /// True once we've at least attempted a fetch this session. Stops the
+    /// debounced PATCH from racing the initial GET on launch.
+    @Published private(set) var hasFetchedBackendProfile: Bool = false
+    private var profileSyncTask: Task<Void, Never>?
 
     // MARK: - HealthKit-sourced state
 
@@ -108,6 +115,68 @@ final class AppState: ObservableObject {
     }
 
     // MARK: - Profile out
+
+    // MARK: - Backend profile sync
+
+    /// Fetch `/user/profile` and apply any server-side fields we honour.
+    /// Called once per authenticated session from the root view.
+    func refreshProfileFromBackend() async {
+        do {
+            let profile = try await APIService.shared.getProfile()
+            ingest(profile)
+        } catch {
+            // Surfacing this is low priority — the user can keep editing locally
+            // and the next PATCH will resync.
+        }
+        hasFetchedBackendProfile = true
+    }
+
+    /// Apply the server's view of the profile to local state, mapping wire
+    /// strings back to typed enums. Body stats / goal / activity remain local
+    /// because the backend does not store them.
+    private func ingest(_ profile: BackendUserProfile) {
+        if let raw = profile.diet, let mapped = DietType.fromBackend(raw), mapped != dietType {
+            // Set without re-triggering a PATCH — the backend just told us this value.
+            withoutPatchScheduling { dietType = mapped }
+        }
+    }
+
+    /// Build the wire shape from current local state. Sent on every PATCH.
+    func currentBackendProfile() -> BackendUserProfile {
+        let macros = macroTargets
+        return BackendUserProfile(
+            diet: dietType.backendString,
+            allergies: nil,
+            dailyCalorieTarget: dailyCalorieTarget,
+            proteinGTarget: macros.protein,
+            carbsGTarget: macros.carbs,
+            fatGTarget: macros.fat,
+            storePriority: ["ah", "picnic"]
+        )
+    }
+
+    /// Trigger a debounced PATCH. Skips the call when we haven't fetched yet
+    /// (avoids racing the initial GET).
+    private func schedulePatchIfChanged<Value: Equatable>(_ newValue: Value, _ oldValue: Value) {
+        guard newValue != oldValue else { return }
+        guard !suppressPatchScheduling else { return }
+        guard hasFetchedBackendProfile else { return }
+        profileSyncTask?.cancel()
+        profileSyncTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard !Task.isCancelled, let self else { return }
+            let snapshot = self.currentBackendProfile()
+            _ = try? await APIService.shared.patchProfile(snapshot)
+        }
+    }
+
+    private var suppressPatchScheduling: Bool = false
+
+    private func withoutPatchScheduling(_ work: () -> Void) {
+        suppressPatchScheduling = true
+        work()
+        suppressPatchScheduling = false
+    }
 
     func userProfile() -> UserProfile {
         let macros = macroTargets

@@ -90,6 +90,54 @@ class APIService {
         return try await postAuth(path: "/auth/login", email: email, password: password)
     }
 
+    // MARK: - Profile
+
+    /// `GET /user/profile`
+    func getProfile() async throws -> BackendUserProfile {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 250_000_000)
+            return BackendUserProfile(
+                diet: "balanced",
+                allergies: [],
+                dailyCalorieTarget: 2000,
+                proteinGTarget: 150,
+                carbsGTarget: 200,
+                fatGTarget: 65,
+                storePriority: ["ah", "picnic"]
+            )
+        }
+
+        guard let url = URL(string: "\(baseURL)/user/profile") else { throw APIError.invalidURL }
+        let req = authedRequest(url: url, method: "GET")
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(BackendUserProfile.self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    /// `PATCH /user/profile` — sends only the fields you want to change.
+    @discardableResult
+    func patchProfile(_ profile: BackendUserProfile) async throws -> BackendUserProfile {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return profile
+        }
+
+        guard let url = URL(string: "\(baseURL)/user/profile") else { throw APIError.invalidURL }
+        var req = authedRequest(url: url, method: "PATCH")
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(profile)
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(BackendUserProfile.self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    // MARK: - Auth helpers (private)
+
     private func postAuth(path: String, email: String, password: String) async throws -> AuthResponse {
         guard let url = URL(string: "\(baseURL)\(path)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)

@@ -28,6 +28,7 @@ struct CookingCompanionApp: App {
 struct RootView: View {
     @EnvironmentObject private var auth: AuthService
     @EnvironmentObject private var realtime: RealtimeService
+    @EnvironmentObject private var appState: AppState
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -40,8 +41,18 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.18), value: auth.isAuthenticated)
-        .onAppear { syncRealtime() }
-        .onChange(of: auth.isAuthenticated) { _, _ in syncRealtime() }
+        .onAppear {
+            syncRealtime()
+            if auth.isAuthenticated {
+                Task { await appState.refreshProfileFromBackend() }
+            }
+        }
+        .onChange(of: auth.isAuthenticated) { _, isAuthed in
+            syncRealtime()
+            if isAuthed {
+                Task { await appState.refreshProfileFromBackend() }
+            }
+        }
         .onChange(of: scenePhase) { _, _ in syncRealtime() }
     }
 
