@@ -47,9 +47,7 @@ async def test_signup_duplicate_email_409(client: AsyncClient) -> None:
 
 
 async def test_login_wrong_password_401(client: AsyncClient) -> None:
-    await client.post(
-        "/auth/signup", json={"email": "carol@test.dev", "password": "supersecret"}
-    )
+    await client.post("/auth/signup", json={"email": "carol@test.dev", "password": "supersecret"})
     bad = await client.post(
         "/auth/login", json={"email": "carol@test.dev", "password": "wrongpass"}
     )

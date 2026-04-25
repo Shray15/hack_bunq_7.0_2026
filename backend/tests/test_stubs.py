@@ -41,9 +41,7 @@ async def test_recipes_generate_returns_recipe(client: AsyncClient) -> None:
 async def test_cart_from_recipe_returns_comparison(client: AsyncClient) -> None:
     headers = await _auth(client)
     rid = str(uuid.uuid4())
-    resp = await client.post(
-        "/cart/from-recipe", json={"recipe_id": rid}, headers=headers
-    )
+    resp = await client.post("/cart/from-recipe", json={"recipe_id": rid}, headers=headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["recipe_id"] == rid
@@ -54,9 +52,7 @@ async def test_cart_from_recipe_returns_comparison(client: AsyncClient) -> None:
 async def test_checkout_returns_payment_url(client: AsyncClient) -> None:
     headers = await _auth(client)
     cart_id = str(uuid.uuid4())
-    resp = await client.post(
-        f"/cart/{cart_id}/checkout", json={"store": "ah"}, headers=headers
-    )
+    resp = await client.post(f"/cart/{cart_id}/checkout", json={"store": "ah"}, headers=headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["payment_url"].startswith("https://")
