@@ -16,6 +16,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: nl.bunq.hackathon.CookingCompanion
         SWIFT_VERSION: "5.9"
         INFOPLIST_FILE: Sources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/CookingCompanion.entitlements
         DEVELOPMENT_TEAM: ""          # fill in your Apple team ID
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     info:
@@ -25,6 +26,8 @@ targets:
         CFBundleDisplayName: Cooking Companion
         NSMicrophoneUsageDescription: "We need microphone access for voice commands."
         NSSpeechRecognitionUsageDescription: "We use speech recognition to understand your cooking requests."
+        NSHealthShareUsageDescription: "Cooking Companion reads your weight, workouts, and activity to personalise calorie and macro targets."
+        NSHealthUpdateUsageDescription: "Cooking Companion writes meal calories and protein to Apple Health so your nutrition logs stay in sync."
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
