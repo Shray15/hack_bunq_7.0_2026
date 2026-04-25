@@ -201,6 +201,13 @@ plain prose. Your output must satisfy these rules:
   may freely reference salt/pepper/water — those are cooking instructions, not
   shopping items.
 - Macros are integer kcal / grams per serving (not for the whole batch).
+- **Meal sizing scales with the user's daily calorie target.** Treat one meal
+  as roughly one third of the daily target unless the user requests otherwise.
+  An athlete on 3500 kcal/day expects ~1100 kcal per meal; a cut on 1800
+  kcal/day expects ~600 kcal. Do NOT default to 400–500 kcal for everyone.
+  Scale ingredient quantities and macro estimates accordingly — bigger
+  portions of protein, carbs, and fat for higher targets, not the same plate
+  with bigger numbers attached.
 - Refuse politely (but still via the tool) if the request is unsafe (e.g. an
   ingredient the user is allergic to). Use the `notes` field to flag any
   caveat.
@@ -222,12 +229,23 @@ async def parse_transcript_to_constraints(
 ) -> NLUResult:
     """Step 1 of the chat flow: NLU on the user's transcript."""
     if not is_configured():
-        return _stub_nlu(transcript)
+        return _stub_nlu(transcript, profile)
 
     now = datetime.now(UTC)
     variety_seed = random.randint(1, 9999)
+    per_meal_target = (
+        profile.daily_calorie_target // 3 if profile.daily_calorie_target else None
+    )
+    sizing_hint = (
+        f"This user's daily calorie target is {profile.daily_calorie_target} kcal, "
+        f"so size this single meal at roughly {per_meal_target} kcal "
+        f"(set constraints.calories_max near this value unless the user said otherwise).\n\n"
+        if per_meal_target
+        else ""
+    )
     user_msg = (
         f"User profile:\n{_render_profile(profile)}\n\n"
+        f"{sizing_hint}"
         f"User said:\n\"\"\"{transcript}\"\"\"\n\n"
         f"Context: {now.strftime('%A')} {now.strftime('%H:%M')} UTC, seed={variety_seed}. "
         "Propose a creative, varied dish — avoid defaulting to grilled chicken "
@@ -283,14 +301,23 @@ async def generate_steps(dish: ProposedDish) -> list[str]:
 
 
 async def generate_macros(
-    dish: ProposedDish, ingredients: list[RecipeIngredient]
+    dish: ProposedDish,
+    ingredients: list[RecipeIngredient],
+    constraints: RecipeConstraints | None = None,
 ) -> Macros:
     if not is_configured():
-        return _stub_macros(dish)
+        return _stub_macros(constraints)
 
+    target_hint = (
+        f"Target per-serving calories: ~{constraints.calories_max} kcal "
+        f"(do not undershoot; this user expects this portion size).\n"
+        if constraints and constraints.calories_max
+        else ""
+    )
     user_msg = (
         f"Dish: {dish.name}\n"
-        f"Ingredients:\n{_render_ingredients(ingredients)}\n\n"
+        f"Ingredients:\n{_render_ingredients(ingredients)}\n"
+        f"{target_hint}\n"
         "Call emit_macros with the estimated per-serving macros."
     )
     payload = await _invoke_tool(_MACROS_TOOL, user_msg)
@@ -428,10 +455,13 @@ def _render_ingredients(items: list[RecipeIngredient]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _stub_nlu(transcript: str) -> NLUResult:
+def _stub_nlu(transcript: str, profile: Profile) -> NLUResult:
     name = _guess_dish_name(transcript)
+    per_meal = (
+        profile.daily_calorie_target // 3 if profile.daily_calorie_target else None
+    )
     return NLUResult(
-        constraints=RecipeConstraints(),
+        constraints=RecipeConstraints(calories_max=per_meal),
         dish=ProposedDish(
             name=name,
             summary=f"Stub-mode plate of {name.lower()}.",
@@ -462,8 +492,21 @@ def _stub_steps(dish: ProposedDish) -> list[str]:
     ]
 
 
-def _stub_macros(_: ProposedDish) -> Macros:
-    return Macros(calories=560, protein_g=48, carbs_g=52, fat_g=16)
+def _stub_macros(constraints: RecipeConstraints | None) -> Macros:
+    """Profile-aware stub: scale macros to the per-meal target if known.
+
+    Real Bedrock estimates from ingredients; without it we used to return a
+    flat 560 kcal regardless of profile, so a 3500 kcal/day user got the same
+    plate as a 1500 kcal/day user. Now we honour `constraints.calories_max`
+    and split into a 30P/40C/30F macro ratio.
+    """
+    target = (constraints.calories_max if constraints else None) or 600
+    return Macros(
+        calories=target,
+        protein_g=int(target * 0.30 / 4),
+        carbs_g=int(target * 0.40 / 4),
+        fat_g=int(target * 0.30 / 9),
+    )
 
 
 def _guess_dish_name(transcript: str) -> str:

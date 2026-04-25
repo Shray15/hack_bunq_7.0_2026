@@ -117,7 +117,7 @@ async def _generate_and_persist(
             len(ingredients),
             len(steps),
         )
-        macros = await claude.generate_macros(dish, ingredients)
+        macros = await claude.generate_macros(dish, ingredients, nlu.constraints)
         log.info(
             "recipe_pipeline_step: macros done calories=%d protein=%dg",
             macros.calories,
