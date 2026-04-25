@@ -6,8 +6,8 @@ enum MessageRole { case user, assistant }
 struct ChatMessage: Identifiable {
     let id        = UUID()
     let role:     MessageRole
-    let text:     String
-    let recipes:  [Recipe]?
+    var text:     String
+    var recipes:  [Recipe]?
     let timestamp = Date()
 
     init(role: MessageRole, text: String, recipes: [Recipe]? = nil) {
@@ -19,75 +19,122 @@ struct ChatMessage: Identifiable {
 
 @MainActor
 class ChatViewModel: ObservableObject {
-    @Published var messages:         [ChatMessage] = []
-    @Published var streamingText:    String        = ""
-    @Published var suggestedRecipes: [Recipe]      = []
-    @Published var isLoading:        Bool          = false
+    @Published var messages: [ChatMessage] = []
+    @Published var isLoading: Bool = false
+    @Published var lastError: String?
 
     private let api = APIService.shared
-    private var activeTask: Task<Void, Never>?
+    private let realtime = RealtimeService.shared
+    private var pendingChatIds: Set<String> = []
+    private var listenerTask: Task<Void, Never>?
 
-    func send(_ text: String, profile: UserProfile) {
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-
-        activeTask?.cancel()
-        messages.append(.init(role: .user, text: trimmed))
-        isLoading     = true
-        streamingText = ""
-
-        activeTask = Task { [weak self] in
-            await self?.run(prompt: trimmed, profile: profile)
+    init() {
+        let stream = realtime.subscribe()
+        listenerTask = Task { [weak self] in
+            for await event in stream {
+                guard let self else { return }
+                self.handle(event)
+            }
         }
     }
 
+    deinit {
+        listenerTask?.cancel()
+    }
+
+    // MARK: - Public
+
+    /// Sends the user's transcript to `POST /chat`. The recipe arrives later via SSE.
+    func send(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        messages.append(.init(role: .user, text: trimmed))
+        isLoading = true
+        lastError = nil
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let response = try await self.api.postChat(transcript: trimmed)
+                self.pendingChatIds.insert(response.chatId)
+            } catch is CancellationError {
+                return
+            } catch {
+                self.appendAssistant(text: "Sorry, something went wrong. Please try again.")
+                self.isLoading = false
+                self.lastError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Drop everything we're waiting on so subsequent SSE events won't surprise the UI.
     func cancel() {
-        activeTask?.cancel()
-        activeTask    = nil
-        streamingText = ""
-        isLoading     = false
+        pendingChatIds.removeAll()
+        isLoading = false
     }
 
     func reset() {
         cancel()
-        messages         = []
-        suggestedRecipes = []
+        messages.removeAll()
+        lastError = nil
     }
 
-    private func run(prompt: String, profile: UserProfile) async {
-        var fullResponse = ""
-        do {
-            for try await chunk in api.streamChat(prompt: prompt, profile: profile) {
-                try Task.checkCancellation()
-                fullResponse  += chunk
-                streamingText  = fullResponse
-            }
-        } catch is CancellationError {
-            streamingText = ""
-            isLoading     = false
-            return
-        } catch {
-            fullResponse = "Sorry, something went wrong. Please try again."
-        }
-        streamingText = ""
+    // MARK: - Realtime handlers
 
-        if Task.isCancelled {
-            isLoading = false
-            return
+    private func handle(_ event: RealtimeEvent) {
+        switch event {
+        case .recipeComplete(let payload):
+            handleRecipeComplete(payload)
+        case .imageReady(let payload):
+            handleImageReady(payload)
+        case .error(let payload) where payload.scope == "chat":
+            handleChatError(payload)
+        default:
+            break
         }
+    }
 
-        do {
-            let recipes = try await api.fetchRecipes(prompt: prompt, profile: profile)
-            try Task.checkCancellation()
-            suggestedRecipes = recipes
-            messages.append(.init(role: .assistant, text: fullResponse, recipes: recipes))
-        } catch is CancellationError {
+    private func handleRecipeComplete(_ payload: RecipeCompleteEvent) {
+        guard pendingChatIds.contains(payload.chatId) else { return }
+        pendingChatIds.remove(payload.chatId)
+
+        appendAssistant(
+            text: introText(for: payload.recipe),
+            recipes: [payload.recipe]
+        )
+
+        if pendingChatIds.isEmpty {
             isLoading = false
-            return
-        } catch {
-            messages.append(.init(role: .assistant, text: fullResponse))
         }
-        isLoading  = false
-        activeTask = nil
+    }
+
+    private func handleImageReady(_ payload: ImageReadyEvent) {
+        for messageIndex in messages.indices {
+            guard var recipes = messages[messageIndex].recipes else { continue }
+            guard let recipeIndex = recipes.firstIndex(where: { $0.id == payload.recipeId }) else { continue }
+            recipes[recipeIndex] = recipes[recipeIndex].replacing(imageURL: payload.imageURL)
+            messages[messageIndex].recipes = recipes
+        }
+    }
+
+    private func handleChatError(_ payload: RealtimeErrorEvent) {
+        appendAssistant(text: payload.message)
+        pendingChatIds.removeAll()
+        isLoading = false
+        lastError = payload.message
+    }
+
+    // MARK: - Helpers
+
+    private func appendAssistant(text: String, recipes: [Recipe]? = nil) {
+        messages.append(.init(role: .assistant, text: text, recipes: recipes))
+    }
+
+    private func introText(for recipe: Recipe) -> String {
+        let kcal = recipe.macros.calories
+        let protein = recipe.macros.proteinG
+        let mins = recipe.prepTimeMin
+        return "Try \(recipe.name) — \(kcal) kcal · \(protein)g protein · \(mins) min."
     }
 }

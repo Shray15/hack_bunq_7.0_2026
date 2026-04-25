@@ -78,8 +78,14 @@ struct ChatView: View {
         .onChange(of: appState.planningPrefill) {
             submitPendingPlanningBrief()
         }
-        .onChange(of: vm.suggestedRecipes) {
-            appState.addRecipesToLibrary(vm.suggestedRecipes)
+        .onChange(of: vm.messages.count) {
+            // Mirror any AI-suggested recipes into the saved library so the user
+            // can find them under the Recipes tab later.
+            for message in vm.messages.suffix(2) {
+                if let recipes = message.recipes {
+                    appState.addRecipesToLibrary(recipes)
+                }
+            }
         }
         .onChange(of: speech.isRecording, initial: false) { wasRecording, isRecording in
             guard wasRecording, !isRecording, shouldSubmitRecordedTranscript else { return }
@@ -110,12 +116,7 @@ struct ChatView: View {
                         .id(msg.id)
                     }
 
-                    if !vm.streamingText.isEmpty {
-                        assistantBubble(text: vm.streamingText)
-                            .id("streaming")
-                    }
-
-                    if vm.isLoading && vm.streamingText.isEmpty {
+                    if vm.isLoading {
                         TypingIndicator()
                             .id("typing")
                     }
@@ -137,9 +138,11 @@ struct ChatView: View {
                     }
                 }
             }
-            .onChange(of: vm.streamingText) {
-                withAnimation(.easeOut(duration: 0.18)) {
-                    proxy.scrollTo("streaming", anchor: .bottom)
+            .onChange(of: vm.isLoading) { _, loading in
+                if loading {
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        proxy.scrollTo("typing", anchor: .bottom)
+                    }
                 }
             }
         }
@@ -379,7 +382,7 @@ struct ChatView: View {
             stripView(
                 icon: "sparkles",
                 tint: AppTheme.primary,
-                title: vm.streamingText.isEmpty ? "Planner is thinking…" : "Streaming response…",
+                title: "Planner is thinking…",
                 action: nil
             )
         }
@@ -464,7 +467,7 @@ struct ChatView: View {
         isInputFocused = false
         inputText = ""
         recordingErrorMessage = nil
-        vm.send(trimmed, profile: appState.userProfile())
+        vm.send(trimmed)
     }
 
     private func submitPendingPlanningBrief() {

@@ -108,75 +108,52 @@ class APIService {
         catch { throw APIError.decoding(error) }
     }
 
-    // MARK: - Chat SSE stream
-    /// Streams assistant text tokens. Each yielded value is a raw text chunk.
-    func streamChat(prompt: String, profile: UserProfile) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
-                if useMockData {
-                    let chunks = ["Let me find something perfect for you…", " Here are 3 options that hit your goals."]
-                    for chunk in chunks {
-                        try? await Task.sleep(nanoseconds: 600_000_000)
-                        continuation.yield(chunk)
-                    }
-                    continuation.finish()
-                    return
-                }
+    // MARK: - Chat
 
-                guard let url = URL(string: "\(baseURL)/chat") else {
-                    continuation.finish(throwing: APIError.invalidURL)
-                    return
-                }
-
-                var req = URLRequest(url: url)
-                req.httpMethod = "POST"
-                req.setValue("application/json",    forHTTPHeaderField: "Content-Type")
-                req.setValue("text/event-stream",   forHTTPHeaderField: "Accept")
-                req.httpBody = try? JSONSerialization.data(withJSONObject: [
-                    "prompt": prompt,
-                    "diet": profile.dietType.rawValue,
-                    "calories": profile.dailyCalorieTarget,
-                ])
-
-                do {
-                    let (bytes, _) = try await URLSession.shared.bytes(for: req)
-                    for try await line in bytes.lines {
-                        guard line.hasPrefix("data: ") else { continue }
-                        let payload = String(line.dropFirst(6))
-                        if payload == "[DONE]" { break }
-                        continuation.yield(payload)
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: APIError.network(error))
-                }
-            }
+    /// `POST /chat` — returns 202 immediately. The recipe arrives later as a
+    /// `recipe_complete` SSE event on the realtime channel.
+    func postChat(transcript: String) async throws -> ChatAccepted {
+        if useMockData {
+            return await mockPostChat(transcript: transcript)
         }
+
+        guard let url = URL(string: "\(baseURL)/chat") else { throw APIError.invalidURL }
+        var req = authedRequest(url: url, method: "POST")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["transcript": transcript])
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(ChatAccepted.self, from: validData) }
+        catch { throw APIError.decoding(error) }
     }
 
-    // MARK: - Recipes
-    func fetchRecipes(prompt: String, profile: UserProfile) async throws -> [Recipe] {
-        if useMockData {
-            try await Task.sleep(nanoseconds: 1_200_000_000)
-            return MockData.recipes
+    /// In mock mode, schedule a simulated `recipe_complete` (and a delayed
+    /// `image_ready`) on the realtime channel so the chat view exercises the
+    /// real SSE-driven flow without a backend.
+    private func mockPostChat(transcript: String) async -> ChatAccepted {
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        let chatId = UUID().uuidString
+        let baseRecipe = MockData.pickRecipe(for: transcript)
+        let pendingImage = baseRecipe.replacing(imageURL: nil)
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            RealtimeService.shared.simulate(.recipeComplete(RecipeCompleteEvent(
+                chatId: chatId,
+                recipeId: baseRecipe.id,
+                recipe: pendingImage
+            )))
+
+            if let url = baseRecipe.imageURL {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                RealtimeService.shared.simulate(.imageReady(ImageReadyEvent(
+                    recipeId: baseRecipe.id,
+                    imageURL: url
+                )))
+            }
         }
 
-        guard let url = URL(string: "\(baseURL)/recipes/generate") else { throw APIError.invalidURL }
-
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: [
-            "prompt": prompt,
-            "diet": profile.dietType.rawValue,
-        ])
-
-        let (data, res) = try await URLSession.shared.data(for: req)
-        guard let http = res as? HTTPURLResponse, http.statusCode == 200 else {
-            throw APIError.server((res as? HTTPURLResponse)?.statusCode ?? 0)
-        }
-        do { return try decoder.decode([Recipe].self, from: data) }
-        catch { throw APIError.decoding(error) }
+        return ChatAccepted(chatId: chatId, accepted: true)
     }
 
     // MARK: - Cart (new 2-step flow)

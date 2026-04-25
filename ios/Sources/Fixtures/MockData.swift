@@ -174,6 +174,48 @@ enum MockData {
 
     // MARK: - Cart fixtures (match new wire contracts)
 
+    /// Pick a mock recipe whose vibe matches the transcript so demo prompts feel
+    /// responsive even before a real LLM is wired up.
+    static func pickRecipe(for transcript: String) -> Recipe {
+        let prompt = transcript.lowercased()
+        let scored = recipes.map { recipe -> (Recipe, Int) in
+            let haystack = ([recipe.name] + recipe.ingredients.map(\.name)).joined(separator: " ").lowercased()
+            var score = 0
+            for keyword in keywordsByCategory.keys where prompt.contains(keyword) {
+                if let category = keywordsByCategory[keyword] {
+                    if haystack.contains(category) { score += 3 }
+                }
+            }
+            for word in prompt.split(whereSeparator: { !$0.isLetter }) where word.count > 3 {
+                if haystack.contains(word.lowercased()) { score += 1 }
+            }
+            return (recipe, score)
+        }
+        let best = scored.max { $0.1 < $1.1 }
+        return best?.1 == 0 ? recipes.randomElement() ?? recipes[0] : best?.0 ?? recipes[0]
+    }
+
+    private static let keywordsByCategory: [String: String] = [
+        "keto":      "keto",
+        "vegan":     "vegan",
+        "vegetarian":"vegan",
+        "salmon":    "salmon",
+        "fish":      "salmon",
+        "tuna":      "tuna",
+        "turkey":    "turkey",
+        "chili":     "chili",
+        "tofu":      "tofu",
+        "stir":      "tofu",
+        "oats":      "oats",
+        "yogurt":    "yogurt",
+        "breakfast": "oats",
+        "protein":   "protein",
+        "chicken":   "chicken",
+        "rice":      "rice",
+        "egg":       "egg",
+        "frittata":  "egg",
+    ]
+
     static let comparisonResponse = CartComparisonResponse(
         cartId: "cart-mock-1",
         recipeId: "recipe-1",

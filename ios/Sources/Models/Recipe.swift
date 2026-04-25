@@ -33,6 +33,31 @@ struct Recipe: Identifiable, Codable, Hashable {
 extension Recipe {
     /// Convenience for legacy call sites — sourced from `macros.calories`.
     var calories: Int { macros.calories }
+
+    /// Returns a copy with the image URL replaced. Used when an `image_ready`
+    /// SSE event upgrades a placeholder recipe to its rendered Nano Banana image.
+    func replacing(imageURL: URL?) -> Recipe {
+        Recipe(
+            id: id,
+            name: name,
+            macros: macros,
+            ingredients: ingredients,
+            steps: steps,
+            imageURL: imageURL,
+            prepTimeMin: prepTimeMin
+        )
+    }
+}
+
+/// Wire shape of `POST /chat` 202 response.
+struct ChatAccepted: Codable, Hashable {
+    let chatId: String
+    let accepted: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case chatId = "chat_id"
+        case accepted
+    }
 }
 
 struct Ingredient: Identifiable, Codable, Hashable {
