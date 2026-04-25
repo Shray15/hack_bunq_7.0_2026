@@ -40,6 +40,9 @@ services:
       AWS_BEDROCK_MODEL_ID: ${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-5-20250929-v1:0}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROCERY_MCP_URL: ${GROCERY_MCP_URL:-http://grocery-mcp:8001/mcp}
+      BUNQ_DATA_DIR: /data/bunq
+    volumes:
+      - /data/bunq:/data/bunq
     ports:
       - "4567:4567"
     depends_on:
