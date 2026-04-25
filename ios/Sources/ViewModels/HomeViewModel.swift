@@ -1,33 +1,26 @@
 import Foundation
 
-struct PlannedMeal: Identifiable {
-    let id    = UUID()
-    let slot:     String  // "Breakfast" | "Lunch" | "Dinner"
-    let recipe:   Recipe?
-    let calories: Int
-}
+struct PlannedMeal: Identifiable, Hashable {
+    var id: String { slot }
+    let slot: String
+    var recipe: Recipe?
+    var title: String?
+    var calories: Int
+    var protein: Int = 0
+    var carbs: Int = 0
+    var fat: Int = 0
+    var imageURL: URL?
+    var loggedAt: Date?
 
-@MainActor
-class HomeViewModel: ObservableObject {
-    @Published var plannedMeals:       [PlannedMeal] = []
-    @Published var consumedCalories:   Int           = 820
-    @Published var dailyCalorieTarget: Int           = 1800
-    @Published var weeklyProteinShort: Int           = 300   // grams below weekly goal
-    @Published var upcomingDelivery:   Date?         = nil
-
-    init() { loadMock() }
-
-    func refresh() async {
-        try? await Task.sleep(nanoseconds: 600_000_000)
-        loadMock()
+    var isPlanned: Bool {
+        recipe != nil || title != nil
     }
 
-    private func loadMock() {
-        plannedMeals = [
-            PlannedMeal(slot: "Breakfast", recipe: nil,                    calories: 380),
-            PlannedMeal(slot: "Lunch",     recipe: MockData.recipes.first, calories: 540),
-            PlannedMeal(slot: "Dinner",    recipe: nil,                    calories: 0),
-        ]
-        upcomingDelivery = Calendar.current.date(byAdding: .hour, value: 3, to: Date())
+    var displayName: String {
+        recipe?.name ?? title ?? "Plan this meal"
+    }
+
+    var displayImageURL: URL? {
+        recipe?.imageURL ?? imageURL
     }
 }

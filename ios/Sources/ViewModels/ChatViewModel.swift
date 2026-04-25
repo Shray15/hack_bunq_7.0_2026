@@ -26,9 +26,8 @@ class ChatViewModel: ObservableObject {
 
     private let api = APIService.shared
     private var activeTask: Task<Void, Never>?
-    var profile     = UserProfile()
 
-    func send(_ text: String) {
+    func send(_ text: String, profile: UserProfile) {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
 
@@ -38,7 +37,7 @@ class ChatViewModel: ObservableObject {
         streamingText = ""
 
         activeTask = Task { [weak self] in
-            await self?.run(prompt: trimmed)
+            await self?.run(prompt: trimmed, profile: profile)
         }
     }
 
@@ -55,7 +54,7 @@ class ChatViewModel: ObservableObject {
         suggestedRecipes = []
     }
 
-    private func run(prompt: String) async {
+    private func run(prompt: String, profile: UserProfile) async {
         var fullResponse = ""
         do {
             for try await chunk in api.streamChat(prompt: prompt, profile: profile) {
