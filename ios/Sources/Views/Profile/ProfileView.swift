@@ -27,6 +27,9 @@ struct ProfileView: View {
                         dietCard
                         healthCard
                         signOutCard
+
+                        BunqAttribution(.inline)
+                            .padding(.top, 8)
                     }
                     .appScrollContentPadding()
                 }

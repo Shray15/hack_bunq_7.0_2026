@@ -206,13 +206,17 @@ struct AuthLandingView: View {
     }
 
     private var footer: some View {
-        VStack(spacing: 6) {
-            Text(mode == .login ? "New here? Tap Create account above." : "Already have an account? Tap Sign in above.")
-                .font(.footnote)
-                .foregroundStyle(AppTheme.secondaryText)
-            Text("Password must be 8–128 characters.")
-                .font(.caption2)
-                .foregroundStyle(AppTheme.secondaryText.opacity(0.8))
+        VStack(spacing: 16) {
+            VStack(spacing: 6) {
+                Text(mode == .login ? "New here? Tap Create account above." : "Already have an account? Tap Sign in above.")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.secondaryText)
+                Text("Password must be 8–128 characters.")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.secondaryText.opacity(0.8))
+            }
+
+            BunqAttribution(.pill)
         }
     }
 
