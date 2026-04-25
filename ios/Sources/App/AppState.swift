@@ -69,6 +69,16 @@ final class AppState: ObservableObject {
         loadMock()
     }
 
+    /// Cancel any in-flight backend sync before the keychain token is wiped.
+    /// Call this immediately before `AuthService.logout()`.
+    /// Intentionally does NOT touch `hasFetchedBackendProfile` — that fires
+    /// `objectWillChange` on every observer, which creates extra churn while
+    /// SwiftUI is mid-dismissing the sign-out confirmation dialog.
+    func prepareForSignOut() {
+        profileSyncTask?.cancel()
+        profileSyncTask = nil
+    }
+
     // MARK: - Persistence
 
     private func persistBodyStats() {

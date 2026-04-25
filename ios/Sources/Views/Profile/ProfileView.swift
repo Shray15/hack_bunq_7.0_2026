@@ -58,7 +58,17 @@ struct ProfileView: View {
                 titleVisibility: .visible
             ) {
                 Button("Sign out", role: .destructive) {
-                    auth.logout()
+                    // Cancel the in-flight profile PATCH synchronously so the next
+                    // 401 doesn't trigger handleUnauthorized after we've already
+                    // logged out.
+                    appState.prepareForSignOut()
+                    // Wait for the confirmation dialog to fully dismiss before
+                    // we wipe the auth token. Flipping auth state mid-dismissal
+                    // crashes (iOS 17.0–17.3) or freezes (17.4+) the view tree.
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 350_000_000)
+                        auth.logout()
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
