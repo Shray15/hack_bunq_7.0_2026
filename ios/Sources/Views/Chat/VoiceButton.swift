@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VoiceButton: View {
     let isRecording: Bool
+    var size: CGFloat = 50
     let action: () -> Void
 
     @State private var pulse: CGFloat = 1
@@ -12,16 +13,16 @@ struct VoiceButton: View {
                 if isRecording {
                     Circle()
                         .fill(Color.red.opacity(0.16))
-                        .frame(width: 62, height: 62)
+                        .frame(width: size + 12, height: size + 12)
                         .scaleEffect(pulse)
                 }
 
                 Circle()
                     .fill(isRecording ? Color.red : AppTheme.primary)
-                    .frame(width: 50, height: 50)
+                    .frame(width: size, height: size)
                     .overlay {
                         Image(systemName: isRecording ? "stop.fill" : "mic.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: size * 0.34, weight: .semibold))
                             .foregroundStyle(.white)
                     }
             }
