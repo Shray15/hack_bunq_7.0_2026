@@ -1,15 +1,9 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @AppStorage("dietType") private var dietTypeRaw = DietType.balanced.rawValue
-    @AppStorage("calorieTarget") private var calorieTarget = 2000
-    @AppStorage("householdSize") private var householdSize = 1
-    @AppStorage("bunqConnected") private var bunqConnected = false
+    @EnvironmentObject private var appState: AppState
     @State private var showBunqConnect = false
-
-    private var dietType: DietType {
-        DietType(rawValue: dietTypeRaw) ?? .balanced
-    }
+    @FocusState private var nameFieldFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -18,102 +12,253 @@ struct ProfileView: View {
 
                 ScrollView {
                     VStack(spacing: 18) {
-                        AppCard {
-                            VStack(alignment: .leading, spacing: 16) {
-                                AppSectionHeader(
-                                    "Profile and goals",
-                                    eyebrow: "Settings",
-                                    detail: "These values shape recipe suggestions, portion sizing, and the nutrition view."
-                                )
-
-                                Picker("Diet type", selection: $dietTypeRaw) {
-                                    ForEach(DietType.allCases, id: \.rawValue) { diet in
-                                        Text(diet.rawValue).tag(diet.rawValue)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-
-                                VStack(spacing: 12) {
-                                    Stepper(value: $calorieTarget, in: 1200...4000, step: 50) {
-                                        AppIconValueRow(
-                                            icon: "flame.fill",
-                                            tint: AppTheme.accent,
-                                            title: "Daily calorie target",
-                                            value: "\(calorieTarget) kcal"
-                                        )
-                                    }
-
-                                    Stepper(value: $householdSize, in: 1...10) {
-                                        AppIconValueRow(
-                                            icon: "person.2.fill",
-                                            tint: AppTheme.primary,
-                                            title: "Default household",
-                                            value: "\(householdSize) \(householdSize == 1 ? "person" : "people")"
-                                        )
-                                    }
-                                }
-                                .padding(14)
-                                .background(AppTheme.mutedCard)
-                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            }
-                        }
-
-                        AppCard {
-                            VStack(alignment: .leading, spacing: 16) {
-                                AppSectionHeader("Current focus", detail: "Small summary tiles make the profile screen feel alive.")
-
-                                HStack(spacing: 12) {
-                                    MetricChip(title: "Diet", value: dietType.rawValue, icon: "leaf.fill", tint: AppTheme.primary)
-                                    MetricChip(title: "bunq", value: bunqConnected ? "Connected" : "Not linked", icon: "creditcard.fill", tint: bunqConnected ? AppTheme.success : AppTheme.accent)
-                                }
-                            }
-                        }
-
-                        AppCard {
-                            VStack(alignment: .leading, spacing: 16) {
-                                AppSectionHeader("Payment", detail: "For the demo this can stay instant. The real version becomes OAuth.")
-
-                                if bunqConnected {
-                                    HStack {
-                                        AppTag("bunq connected", color: AppTheme.success, icon: "checkmark.circle.fill")
-                                        Spacer()
-                                        Button("Disconnect", role: .destructive) {
-                                            bunqConnected = false
-                                        }
-                                    }
-                                } else {
-                                    Button {
-                                        showBunqConnect = true
-                                    } label: {
-                                        Label("Connect bunq account", systemImage: "creditcard.fill")
-                                    }
-                                    .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.success))
-                                }
-                            }
-                        }
-
-                        AppCard(background: AppTheme.mutedCard) {
-                            HStack {
-                                Text("Version")
-                                    .font(.subheadline)
-                                    .foregroundStyle(AppTheme.secondaryText)
-                                Spacer()
-                                Text("1.0.0 · hackathon build")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppTheme.text)
-                            }
-                        }
+                        identityCard
+                        goalsCard
+                        paymentCard
                     }
                     .appScrollContentPadding()
                 }
             }
             .navigationTitle("Profile")
             .sheet(isPresented: $showBunqConnect) {
-                BunqConnectSheet(isConnected: $bunqConnected)
+                BunqConnectSheet(isConnected: $appState.bunqConnected)
             }
         }
     }
+
+    // MARK: - Identity
+
+    private var identityCard: some View {
+        AppCard {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.primary, AppTheme.primaryDeep],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Text(initials)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 64, height: 64)
+                .shadow(color: AppTheme.primary.opacity(0.22), radius: 14, y: 8)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    TextField("Your name", text: $appState.displayName)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(AppTheme.text)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .focused($nameFieldFocused)
+                        .onSubmit { nameFieldFocused = false }
+
+                    Text(dietSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var initials: String {
+        let parts = appState.displayName
+            .split(separator: " ")
+            .prefix(2)
+            .map { String($0.prefix(1)).uppercased() }
+        return parts.isEmpty ? "?" : parts.joined()
+    }
+
+    private var dietSubtitle: String {
+        let calories = "\(appState.dailyCalorieTarget) kcal/day"
+        let people = appState.householdSize == 1 ? "solo" : "\(appState.householdSize) people"
+        return "\(appState.dietType.rawValue) · \(calories) · \(people)"
+    }
+
+    // MARK: - Goals
+
+    private var goalsCard: some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Goals")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.text)
+
+                dietRow
+                Divider()
+
+                HStack(spacing: 12) {
+                    AppIconValueRow(
+                        icon: "flame.fill",
+                        tint: AppTheme.accent,
+                        title: "Daily calorie target",
+                        value: "\(appState.dailyCalorieTarget) kcal"
+                    )
+                    InlineStepper(
+                        value: $appState.dailyCalorieTarget,
+                        range: 1200...4000,
+                        step: 50
+                    )
+                }
+
+                Divider()
+
+                HStack(spacing: 12) {
+                    AppIconValueRow(
+                        icon: "person.2.fill",
+                        tint: AppTheme.primary,
+                        title: "Default household",
+                        value: "\(appState.householdSize) \(appState.householdSize == 1 ? "person" : "people")"
+                    )
+                    InlineStepper(
+                        value: $appState.householdSize,
+                        range: 1...10,
+                        step: 1
+                    )
+                }
+            }
+        }
+    }
+
+    private var dietRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "leaf.fill")
+                .foregroundStyle(AppTheme.primary)
+                .frame(width: 34, height: 34)
+                .background(AppTheme.primary.opacity(0.12))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Diet style")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
+                Text(appState.dietType.rawValue)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.text)
+            }
+
+            Spacer()
+
+            Menu {
+                ForEach(DietType.allCases, id: \.rawValue) { diet in
+                    Button {
+                        appState.dietType = diet
+                    } label: {
+                        if diet == appState.dietType {
+                            Label(diet.rawValue, systemImage: "checkmark")
+                        } else {
+                            Text(diet.rawValue)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Change")
+                        .font(.caption.weight(.semibold))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2.weight(.semibold))
+                }
+                .foregroundStyle(AppTheme.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppTheme.primary.opacity(0.12))
+                .clipShape(Capsule())
+            }
+            .accessibilityLabel("Change diet style")
+        }
+    }
+
+    // MARK: - Payment
+
+    private var paymentCard: some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Payment")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.text)
+
+                if appState.bunqConnected {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(AppTheme.success)
+                            .frame(width: 34, height: 34)
+                            .background(AppTheme.success.opacity(0.12))
+                            .clipShape(Circle())
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("bunq linked")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.text)
+                            Text("Checkout opens a payment request directly.")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+
+                        Spacer()
+                    }
+                } else {
+                    Button {
+                        showBunqConnect = true
+                    } label: {
+                        Label("Connect bunq account", systemImage: "creditcard.fill")
+                    }
+                    .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.success))
+                }
+            }
+        }
+    }
+
 }
+
+// MARK: - Inline stepper
+
+private struct InlineStepper: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let step: Int
+
+    var body: some View {
+        HStack(spacing: 0) {
+            stepperButton(systemImage: "minus", enabled: value > range.lowerBound) {
+                let next = value - step
+                value = max(next, range.lowerBound)
+            }
+            .accessibilityLabel("Decrease")
+
+            stepperButton(systemImage: "plus", enabled: value < range.upperBound) {
+                let next = value + step
+                value = min(next, range.upperBound)
+            }
+            .accessibilityLabel("Increase")
+        }
+        .background(AppTheme.mutedCard)
+        .overlay {
+            Capsule()
+                .stroke(AppTheme.stroke, lineWidth: 1)
+        }
+        .clipShape(Capsule())
+    }
+
+    private func stepperButton(systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(enabled ? AppTheme.primary : AppTheme.secondaryText.opacity(0.4))
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+    }
+}
+
+// MARK: - Bunq connect sheet
 
 struct BunqConnectSheet: View {
     @Binding var isConnected: Bool
@@ -169,6 +314,7 @@ struct BunqConnectSheet: View {
                     .padding(.bottom, 24)
                 }
             }
+            .navigationTitle("Connect bunq")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

@@ -2,109 +2,113 @@ import SwiftUI
 
 struct RecipeDetailView: View {
     let recipe: Recipe
-    @State private var servings = 1
+    @EnvironmentObject private var appState: AppState
+    @State private var servings: Int?
     @State private var showingOrder = false
-    @Environment(\.dismiss) private var dismiss
+    @State private var showInstructions = false
+
+    private var currentServings: Binding<Int> {
+        Binding(
+            get: { servings ?? appState.householdSize },
+            set: { servings = $0 }
+        )
+    }
 
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
-                AppBackground()
+        ZStack(alignment: .top) {
+            AppBackground()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        hero
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    hero
 
-                        statsCard
+                    statsCard
 
-                        AppCard {
-                            VStack(alignment: .leading, spacing: 16) {
-                                AppSectionHeader("Ingredients", detail: "Scaled live for the number of people you are cooking for.")
+                    AppCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            AppSectionHeader("Ingredients", detail: "Scaled live for the number of people you are cooking for.")
 
-                                HStack(spacing: 12) {
-                                    Text("Servings")
+                            HStack(spacing: 12) {
+                                Text("Servings")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppTheme.text)
+                                Spacer()
+                                ServingsStepper(value: currentServings, range: 1...12)
+                            }
+
+                            ForEach(recipe.ingredients) { item in
+                                HStack(alignment: .center, spacing: 12) {
+                                    Circle()
+                                        .fill(AppTheme.primary.opacity(0.18))
+                                        .frame(width: 10, height: 10)
+                                    Text(item.name.capitalized)
                                         .font(.subheadline)
-                                        .fontWeight(.semibold)
                                         .foregroundStyle(AppTheme.text)
                                     Spacer()
-                                    ServingsStepper(value: $servings, range: 1...12)
+                                    Text("\(formatQty(item.qty * Double(currentServings.wrappedValue))) \(item.unit)")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(AppTheme.secondaryText)
                                 }
-
-                                ForEach(recipe.ingredients) { item in
-                                    HStack(alignment: .center, spacing: 12) {
-                                        Circle()
-                                            .fill(AppTheme.primary.opacity(0.18))
-                                            .frame(width: 10, height: 10)
-                                        Text(item.name.capitalized)
-                                            .font(.subheadline)
-                                            .foregroundStyle(AppTheme.text)
-                                        Spacer()
-                                        Text("\(formatQty(item.qty * Double(servings))) \(item.unit)")
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(AppTheme.secondaryText)
-                                    }
-                                    .padding(.vertical, 4)
-                                }
+                                .padding(.vertical, 4)
                             }
                         }
+                    }
 
-                        AppCard {
-                            VStack(alignment: .leading, spacing: 16) {
-                                AppSectionHeader("Instructions", detail: "Built for a quick weeknight cook, not a three-page blog recipe.")
+                    AppCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            DisclosureGroup(isExpanded: $showInstructions) {
+                                VStack(alignment: .leading, spacing: 14) {
+                                    ForEach(Array(recipe.steps.enumerated()), id: \.offset) { index, step in
+                                        HStack(alignment: .top, spacing: 14) {
+                                            Text("\(index + 1)")
+                                                .font(.subheadline.weight(.bold))
+                                                .foregroundStyle(.white)
+                                                .frame(width: 30, height: 30)
+                                                .background(AppTheme.primary)
+                                                .clipShape(Circle())
 
-                                ForEach(Array(recipe.steps.enumerated()), id: \.offset) { index, step in
-                                    HStack(alignment: .top, spacing: 14) {
-                                        Text("\(index + 1)")
-                                            .font(.subheadline.weight(.bold))
-                                            .foregroundStyle(.white)
-                                            .frame(width: 30, height: 30)
-                                            .background(AppTheme.primary)
-                                            .clipShape(Circle())
+                                            Text(step)
+                                                .font(.subheadline)
+                                                .foregroundStyle(AppTheme.text)
 
-                                        Text(step)
-                                            .font(.subheadline)
-                                            .foregroundStyle(AppTheme.text)
-
-                                        Spacer(minLength: 0)
+                                            Spacer(minLength: 0)
+                                        }
                                     }
+                                }
+                                .padding(.top, 8)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Cooking steps")
+                                        .font(.headline.weight(.bold))
+                                        .foregroundStyle(AppTheme.text)
+                                    Text("\(recipe.steps.count) quick steps when you are ready to cook.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(AppTheme.secondaryText)
                                 }
                             }
                         }
                     }
-                    .appScrollContentPadding()
                 }
+                .appScrollContentPadding()
             }
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(AppTheme.text)
-                            .frame(width: 36, height: 36)
-                            .background(AppTheme.card)
-                            .clipShape(Circle())
-                    }
-                }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                showingOrder = true
+            } label: {
+                Label("Order ingredients", systemImage: "cart.fill")
             }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    showingOrder = true
-                } label: {
-                    Label("Order ingredients", systemImage: "cart.fill")
-                }
-                .buttonStyle(AppPrimaryButtonStyle())
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
-                .padding(.bottom, 8)
-                .background(.ultraThinMaterial)
-            }
-            .sheet(isPresented: $showingOrder) {
-                OrderCheckoutView(recipe: recipe, servings: servings)
-            }
+            .buttonStyle(AppPrimaryButtonStyle())
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+            .background(.ultraThinMaterial)
+        }
+        .sheet(isPresented: $showingOrder) {
+            OrderCheckoutView(recipe: recipe, servings: currentServings.wrappedValue)
         }
     }
 
@@ -146,7 +150,7 @@ struct RecipeDetailView: View {
                     .lineLimit(2)
                     .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
 
-                Text("Balanced for speed, macros, and a clean grocery handoff into checkout.")
+                Text("Balanced for speed, macros, and checkout.")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.88))
                     .shadow(color: .black.opacity(0.35), radius: 6, y: 2)

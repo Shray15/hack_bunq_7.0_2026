@@ -37,13 +37,12 @@ struct OrderCheckoutView: View {
     let recipe: Recipe
     let servings: Int
 
+    @EnvironmentObject private var appState: AppState
     @StateObject private var vm = OrderViewModel()
-    @State private var deliveryIndex = 0
     @State private var showError = false
+    @State private var showBunqConnect = false
     @State private var excludedItemIDs: Set<String> = []
     @Environment(\.dismiss) private var dismiss
-
-    private let deliveryOptions = ["Today", "Tomorrow", "Pick a date"]
 
     var body: some View {
         NavigationStack {
@@ -73,6 +72,7 @@ struct OrderCheckoutView: View {
             .task { await vm.load(recipe: recipe, people: servings) }
             .onChange(of: vm.paymentURL) {
                 if let url = vm.paymentURL {
+                    appState.completeOrder(recipe: recipe, servings: servings)
                     UIApplication.shared.open(url)
                     dismiss()
                 }
@@ -89,6 +89,9 @@ struct OrderCheckoutView: View {
             } message: {
                 Text(vm.errorMsg ?? "")
             }
+            .sheet(isPresented: $showBunqConnect) {
+                BunqConnectSheet(isConnected: $appState.bunqConnected)
+            }
         }
     }
 
@@ -97,10 +100,10 @@ struct OrderCheckoutView: View {
             AppCard {
                 VStack(spacing: 14) {
                     ProgressView()
-                    Text("Matching ingredients to real products...")
+                    Text("Building your basket...")
                         .font(.headline)
                         .foregroundStyle(AppTheme.text)
-                    Text("This is the handoff from recipe to grocery cart.")
+                    Text("We are matching ingredients, quantities, and prices.")
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.secondaryText)
                 }
@@ -128,7 +131,7 @@ struct OrderCheckoutView: View {
                             .fontWeight(.bold)
                             .foregroundStyle(AppTheme.text)
 
-                        Text("Scaled for \(servings) \(servings == 1 ? "person" : "people"). Ready to pay through bunq when you confirm.")
+                        Text(checkoutSummaryText)
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                     }
@@ -136,7 +139,7 @@ struct OrderCheckoutView: View {
 
                 AppCard {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSectionHeader("Basket", detail: "Tap an item to skip it if you already have it at home.")
+                        AppSectionHeader("Basket", detail: "Tap anything you already have at home.")
 
                         ForEach(cart.items) { item in
                             BasketRow(
@@ -148,29 +151,6 @@ struct OrderCheckoutView: View {
 
                             if item.id != cart.items.last?.id {
                                 Divider()
-                            }
-                        }
-                    }
-                }
-
-                AppCard {
-                    VStack(alignment: .leading, spacing: 14) {
-                        AppSectionHeader("Delivery", detail: "Keep this simple for the demo. Time slot depth can come later.")
-
-                        HStack(spacing: 10) {
-                            ForEach(Array(deliveryOptions.enumerated()), id: \.offset) { index, option in
-                                Button {
-                                    deliveryIndex = index
-                                } label: {
-                                    Text(option)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(deliveryIndex == index ? .white : AppTheme.text)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 12)
-                                        .background(deliveryIndex == index ? AppTheme.primary : AppTheme.mutedCard)
-                                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -198,9 +178,9 @@ struct OrderCheckoutView: View {
                         }
 
                         HStack {
-                            AppTag("bunq checkout", color: AppTheme.success, icon: "creditcard.fill")
+                            AppTag(appState.bunqConnected ? "bunq connected" : "bunq required", color: appState.bunqConnected ? AppTheme.success : AppTheme.accent, icon: "creditcard.fill")
                             Spacer()
-                            Text("Sandbox ready")
+                            Text(appState.bunqConnected ? "Ready to pay" : "Connect before paying")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
@@ -211,20 +191,26 @@ struct OrderCheckoutView: View {
         }
         .safeAreaInset(edge: .bottom) {
             Button {
-                Task { await vm.checkout(cart: filteredCart(cart)) }
+                if appState.bunqConnected {
+                    Task { await vm.checkout(cart: filteredCart(cart)) }
+                } else {
+                    showBunqConnect = true
+                }
             } label: {
                 Group {
                     if vm.isOrdering {
                         ProgressView()
                             .tint(.white)
                             .frame(maxWidth: .infinity)
-                    } else if hasIncludedItems(cart) {
+                    } else if !hasIncludedItems(cart) {
+                        Label("Add an item to checkout", systemImage: "cart.badge.minus")
+                    } else if !appState.bunqConnected {
+                        Label("Connect bunq to pay", systemImage: "creditcard.fill")
+                    } else {
                         Label(
                             "Pay €\(filteredTotal(cart), specifier: "%.2f") via bunq",
                             systemImage: "creditcard.fill"
                         )
-                    } else {
-                        Label("Add an item to checkout", systemImage: "cart.badge.minus")
                     }
                 }
             }
@@ -235,6 +221,14 @@ struct OrderCheckoutView: View {
             .background(.ultraThinMaterial)
             .disabled(vm.isOrdering || !hasIncludedItems(cart))
         }
+    }
+
+    private var checkoutSummaryText: String {
+        let people = "\(servings) \(servings == 1 ? "person" : "people")"
+        if appState.bunqConnected {
+            return "Scaled for \(people). Confirm once and the order moves into your day."
+        }
+        return "Scaled for \(people). Connect bunq to finish checkout."
     }
 
     private func toggle(_ id: String) {

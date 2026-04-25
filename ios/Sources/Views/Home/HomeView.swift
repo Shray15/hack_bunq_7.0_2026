@@ -2,10 +2,11 @@ import SwiftUI
 
 struct HomeView: View {
     @Binding var selectedTab: Int
-    @StateObject private var vm = HomeViewModel()
-    @AppStorage("displayName") private var displayName = "Sai"
+    @EnvironmentObject private var appState: AppState
     @State private var selectedRecipe: Recipe?
     @State private var showDeliveryDetails = false
+
+    private var displayName: String { appState.displayName }
 
     var body: some View {
         NavigationStack {
@@ -16,7 +17,7 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         heroCard
 
-                        if let delivery = vm.upcomingDelivery {
+                        if let delivery = appState.upcomingDelivery {
                             DeliveryBanner(eta: delivery) {
                                 showDeliveryDetails = true
                             }
@@ -25,36 +26,38 @@ struct HomeView: View {
                         VStack(alignment: .leading, spacing: 14) {
                             AppSectionHeader(
                                 "Today's meals",
-                                eyebrow: "Daily brief",
-                                detail: heroBodyCopy
+                                eyebrow: "Daily brief"
                             )
 
-                            ForEach(vm.plannedMeals) { meal in
+                            ForEach(appState.plannedMeals) { meal in
                                 MealRow(meal: meal) {
                                     handleMealTap(meal)
                                 }
                             }
                         }
 
-                        NutritionNudgeCard(weeklyProteinShort: vm.weeklyProteinShort) {
+                        Button {
                             selectedTab = 1
+                        } label: {
+                            Label("Plan a meal", systemImage: "sparkles")
                         }
+                        .buttonStyle(AppPrimaryButtonStyle())
+                        .accessibilityLabel("Plan a meal with the assistant")
                     }
                     .appScrollContentPadding()
-                }
-                .refreshable {
-                    await vm.refresh()
                 }
             }
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selectedRecipe) { recipe in
-                RecipeDetailView(recipe: recipe)
+                NavigationStack {
+                    RecipeDetailView(recipe: recipe)
+                }
             }
             .alert("Delivery on the way", isPresented: $showDeliveryDetails) {
                 Button("OK", role: .cancel) {}
             } message: {
-                if let eta = vm.upcomingDelivery {
+                if let eta = appState.upcomingDelivery {
                     Text("Arriving \(eta.formatted(date: .omitted, time: .shortened)). We'll notify you when it's nearby.")
                 }
             }
@@ -104,7 +107,7 @@ struct HomeView: View {
                     .accessibilityLabel("Open profile")
                 }
 
-                CalorieProgressCard(consumed: vm.consumedCalories, target: vm.dailyCalorieTarget)
+                CalorieProgressCard(consumed: appState.consumedCalories, target: appState.dailyCalorieTarget)
             }
         }
     }
@@ -122,7 +125,7 @@ struct HomeView: View {
     }
 
     private var heroBodyCopy: String {
-        let unplanned = vm.plannedMeals.filter { $0.recipe == nil }
+        let unplanned = appState.plannedMeals.filter { !$0.isPlanned }
         guard !unplanned.isEmpty else {
             return "All meals planned. Groceries are queued — nice work."
         }
@@ -146,7 +149,10 @@ struct HomeView: View {
     private func handleMealTap(_ meal: PlannedMeal) {
         if let recipe = meal.recipe {
             selectedRecipe = recipe
+        } else if meal.isPlanned {
+            selectedTab = 2
         } else {
+            appState.requestPlanning(for: meal.slot)
             selectedTab = 1
         }
     }
@@ -245,14 +251,14 @@ struct MealRow: View {
         Button(action: action) {
             AppCard(background: meal.recipe == nil ? Color(red: 0.95, green: 0.98, blue: 0.96) : AppTheme.card) {
                 HStack(spacing: 14) {
-                    RemoteImageView(url: meal.recipe?.imageURL, cornerRadius: 20) {
+                    RemoteImageView(url: meal.displayImageURL, cornerRadius: 20) {
                         ZStack {
                             LinearGradient(
                                 colors: [AppTheme.primary.opacity(0.18), AppTheme.accent.opacity(0.12)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
-                            Image(systemName: meal.recipe == nil ? "sparkles" : "fork.knife")
+                            Image(systemName: meal.isPlanned ? "fork.knife" : "sparkles")
                                 .font(.title3)
                                 .foregroundStyle(AppTheme.primaryDeep.opacity(0.65))
                         }
@@ -262,12 +268,12 @@ struct MealRow: View {
                     VStack(alignment: .leading, spacing: 8) {
                         AppTag(meal.slot, color: AppTheme.primary)
 
-                        Text(meal.recipe?.name ?? "Plan this meal")
+                        Text(meal.displayName)
                             .font(.headline)
                             .foregroundStyle(AppTheme.text)
                             .multilineTextAlignment(.leading)
 
-                        Text(meal.recipe == nil ? "Add a dinner that fits your target and pantry." : "\(meal.calories) kcal")
+                        Text(mealSubtitle)
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
                             .multilineTextAlignment(.leading)
@@ -275,7 +281,7 @@ struct MealRow: View {
 
                     Spacer()
 
-                    if meal.recipe == nil {
+                    if !meal.isPlanned {
                         Text("Plan")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(AppTheme.primary)
@@ -283,7 +289,7 @@ struct MealRow: View {
                             .padding(.vertical, 8)
                             .background(AppTheme.primary.opacity(0.12))
                             .clipShape(Capsule())
-                    } else {
+                    } else if meal.recipe != nil {
                         Image(systemName: "chevron.right")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(AppTheme.secondaryText)
@@ -295,56 +301,23 @@ struct MealRow: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
+    private var mealSubtitle: String {
+        if !meal.isPlanned {
+            return "Fits your remaining target and profile."
+        }
+        if meal.recipe == nil {
+            return "Logged · \(meal.calories) kcal"
+        }
+        return "\(meal.calories) kcal"
+    }
+
     private var accessibilityLabel: String {
         if let recipe = meal.recipe {
             return "\(meal.slot): \(recipe.name), \(meal.calories) kilocalories. Tap to open."
+        } else if meal.isPlanned {
+            return "\(meal.slot): \(meal.displayName), \(meal.calories) kilocalories. Tap to view tracker."
         } else {
             return "\(meal.slot) is unplanned. Tap to plan a meal."
         }
-    }
-}
-
-// MARK: - Nutrition nudge
-
-struct NutritionNudgeCard: View {
-    let weeklyProteinShort: Int
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            AppCard(background: AppTheme.mutedCard) {
-                HStack(spacing: 14) {
-                    Image(systemName: "bolt.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.accent)
-                        .frame(width: 42, height: 42)
-                        .background(AppTheme.accent.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Nutrition nudge")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(AppTheme.secondaryText)
-                        Text("\(weeklyProteinShort) g short on protein this week")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.text)
-                            .multilineTextAlignment(.leading)
-                        Text("A strong dinner tonight closes the gap quickly.")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondaryText)
-                            .multilineTextAlignment(.leading)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Nutrition nudge: \(weeklyProteinShort) grams short on protein this week. Tap to plan dinner.")
     }
 }
