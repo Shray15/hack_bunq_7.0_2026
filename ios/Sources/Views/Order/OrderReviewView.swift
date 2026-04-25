@@ -57,12 +57,23 @@ final class OrderViewModel: ObservableObject {
         isPaid = false
     }
 
-    /// User says they paid but the SSE event hasn't arrived (e.g. simulator,
-    /// flaky webhook). Treat as paid so the demo doesn't stall.
-    func markPaidManually() {
-        isPaid = true
+    /// User finished the bunq.me iDEAL flow in the browser and tapped
+    /// "I already paid" back in the app. Production bunq.me URLs can't be
+    /// polled, so we ask the backend to flip the order to paid (which also
+    /// autologs the meal and emits the SSE event so other tabs react).
+    func markPaidManually() async {
         listenerTask?.cancel()
         listenerTask = nil
+        guard let id = orderId else {
+            isPaid = true
+            return
+        }
+        do {
+            try await api.markOrderPaid(orderId: id)
+            isPaid = true
+        } catch {
+            errorMsg = "Could not confirm payment: \(error.localizedDescription)"
+        }
     }
 
     private func startWaitingForPayment() {
@@ -336,7 +347,7 @@ struct OrderReviewView: View {
                     .disabled(vm.paymentURL == nil)
 
                     Button("I already paid") {
-                        vm.markPaidManually()
+                        Task { await vm.markPaidManually() }
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.primary)

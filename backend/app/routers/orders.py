@@ -25,6 +25,13 @@ async def checkout(
     )
 
 
+@router.post("/orders/{order_id}/mark-paid", response_model=Order)
+async def mark_order_paid(
+    order_id: uuid.UUID, user_id: CurrentUserId, db: DbSession
+) -> Order:
+    return await order_flow.mark_paid(db=db, user_id=user_id, order_id=order_id)
+
+
 @router.get("/orders/{order_id}", response_model=Order)
 async def get_order(
     order_id: uuid.UUID, user_id: CurrentUserId, db: DbSession

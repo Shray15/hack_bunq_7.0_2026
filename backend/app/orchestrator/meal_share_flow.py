@@ -1,15 +1,15 @@
 """Meal-share orchestrator.
 
 Generates a 'split the cost' bunq.me link for a paid order. The link is
-fixed-amount per person, minted via the existing MCP `create_payment_request`
-(which now uses BunqMeTab — see Phase 0 fix). One MealShare row is created
-per (order, participant_count) combo so re-opening the same split returns the
-same URL instead of creating duplicates.
+fixed-amount per person, built directly via `bunq_me.build_payment_url` so
+friends land on a real production bunq.me page in their browser. One
+MealShare row is created per (order, participant_count, include_self) combo
+so re-opening the same split returns the same URL instead of creating
+duplicates.
 """
 
 from __future__ import annotations
 
-import logging
 import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -17,23 +17,12 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters import grocery_mcp
-from app.adapters.grocery_mcp import GroceryMcpError
+from app.adapters import bunq_me
 from app.models import Cart as CartModel
 from app.models import MealShare as MealShareModel
 from app.models import Order as OrderModel
 from app.models import Recipe as RecipeModel
-from app.schemas.meal_share import ShareCostOut, ShareStatus
-
-log = logging.getLogger(__name__)
-
-# bunq BunqMeTab status (from MCP) -> our share status. Anything not paid yet
-# is "open" so the share UI keeps the "share with friends" state showing.
-_SHARE_STATUS_MAP: dict[str, ShareStatus] = {
-    "paid": "closed",
-    "rejected": "closed",
-    "expired": "closed",
-}
+from app.schemas.meal_share import ShareCostOut
 
 
 async def create_share(
@@ -64,23 +53,9 @@ async def create_share(
         return _to_schema(existing)
 
     description = await _share_description(db, order)
-    try:
-        payload = await grocery_mcp.create_payment_request(
-            float(per_person), description
-        )
-    except GroceryMcpError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"grocery-mcp create_payment_request failed: {exc}",
-        ) from exc
-
-    request_id = str(payload.get("request_id") or "")
-    share_url = str(payload.get("payment_url") or "")
-    if not share_url:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="grocery-mcp returned no share URL",
-        )
+    payload = bunq_me.build_payment_url(float(per_person), description)
+    request_id = payload["request_id"]
+    share_url = payload["payment_url"]
 
     row = MealShareModel(
         order_id=order.id,
@@ -106,7 +81,13 @@ async def get_latest_share(
     order_id: uuid.UUID,
     refresh_status: bool = True,
 ) -> ShareCostOut | None:
-    """Return the most recent share for this order, refreshing bunq status."""
+    """Return the most recent share for this order.
+
+    `refresh_status` is currently a no-op: production bunq.me URLs aren't
+    backed by a sandbox BunqMeTab we can poll, so the share stays "open"
+    until something else closes it. Kept in the signature so we can re-enable
+    polling if/when we hit a real bunq API for share-cost."""
+    del refresh_status  # reserved
     await _load_paid_order(db, order_id, user_id)
 
     stmt = (
@@ -121,10 +102,6 @@ async def get_latest_share(
     row = (await db.execute(stmt)).scalar_one_or_none()
     if row is None:
         return None
-
-    if refresh_status and row.status == "open" and row.bunq_request_id:
-        await _maybe_close_share(db, row)
-
     return _to_schema(row)
 
 
@@ -187,22 +164,6 @@ async def _share_description(db: AsyncSession, order: OrderModel) -> str:
     if recipe is None or not recipe.name:
         return "Your share of dinner"
     return f"Your share of {recipe.name}"
-
-
-async def _maybe_close_share(db: AsyncSession, row: MealShareModel) -> None:
-    """One-shot bunq status check; flip to 'closed' on terminal state."""
-    if row.bunq_request_id is None:
-        return
-    try:
-        payload = await grocery_mcp.get_payment_status(row.bunq_request_id)
-    except GroceryMcpError as exc:
-        log.warning("share_status_check_failed: share=%s — %s", row.id, exc)
-        return
-    bunq_status = str(payload.get("status", "pending")).lower()
-    new_status = _SHARE_STATUS_MAP.get(bunq_status, "open")
-    if new_status != row.status:
-        row.status = new_status
-        await db.commit()
 
 
 def _round_half_up(value: float) -> Decimal:

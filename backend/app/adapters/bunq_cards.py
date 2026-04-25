@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
@@ -28,11 +29,18 @@ from bunq.sdk.model.generated.endpoint import (
     CardDebitApiObject,
     MonetaryAccountBankApiObject,
     PaymentApiObject,
+    RequestInquiryApiObject,
 )
 from bunq.sdk.model.generated.object_ import (
     AmountObject,
     PointerObject,
 )
+
+# bunq sandbox provides a built-in "Sugar Daddy" auto-fulfilling account that
+# accepts any incoming RequestInquiry and pays it. Used for both initial card
+# funding and user-triggered top-ups.
+SUGAR_DADDY_EMAIL = "sugardaddy@bunq.com"
+SUGAR_DADDY_NAME = "Sugar Daddy"
 
 log = logging.getLogger(__name__)
 
@@ -118,24 +126,27 @@ def _fund_sub_account_sync(
     amount_eur: Decimal | float,
     description: str,
 ) -> dict[str, Any]:
+    """Top up the meal-card sub-account from bunq sandbox's Sugar Daddy.
+
+    Issues a RequestInquiry FROM the sub-account TO sugardaddy@bunq.com.
+    Sugar Daddy auto-accepts and sends the funds to the sub-account, so the
+    money lands without dipping into the user's primary account."""
     _load_context()
-    primary_id = _resolve_primary_account_id()
     amount = _format_eur(amount_eur)
 
-    sub = MonetaryAccountBankApiObject.get(monetary_account_id).value
-    sub_iban = _account_iban(sub)
-    sub_name = getattr(sub, "description", None) or "Meal card"
-
-    payment_id = PaymentApiObject.create(
-        amount=AmountObject(amount, "EUR"),
-        counterparty_alias=PointerObject("IBAN", sub_iban, name=sub_name),
+    request_id = RequestInquiryApiObject.create(
+        amount_inquired=AmountObject(amount, "EUR"),
+        counterparty_alias=PointerObject(
+            "EMAIL", SUGAR_DADDY_EMAIL, name=SUGAR_DADDY_NAME
+        ),
         description=description,
-        monetary_account_id=primary_id,
+        allow_bunqme=False,
+        monetary_account_id=monetary_account_id,
     ).value
 
     refreshed = MonetaryAccountBankApiObject.get(monetary_account_id).value
     return {
-        "payment_id": int(payment_id),
+        "payment_id": int(request_id),
         "balance_after": _balance_decimal(refreshed),
     }
 
@@ -228,27 +239,69 @@ def _list_card_transactions_sync(
     monetary_account_id: int,
     count: int = 50,
 ) -> list[dict[str, Any]]:
+    """List recent payments for the meal-card sub-account.
+
+    Defensive against bunq SDK quirks: skips rows that don't decode cleanly
+    instead of failing the whole request, and normalizes the timestamp into
+    ISO 8601 so iOS's `.iso8601` decoder accepts it (bunq's wire format uses
+    a space separator that fails strict ISO parsing on older iOS targets)."""
     _load_context()
 
-    payments = PaymentApiObject.list(
-        monetary_account_id=monetary_account_id,
-        params={"count": str(count)},
-    ).value
+    try:
+        payments = PaymentApiObject.list(monetary_account_id).value
+    except Exception as exc:
+        log.warning(
+            "bunq Payment.list failed for ma=%s: %s",
+            monetary_account_id,
+            exc,
+        )
+        return []
 
     out: list[dict[str, Any]] = []
-    for p in payments:
-        amt = getattr(p, "amount", None)
-        if amt is None:
+    for p in payments[:count]:
+        try:
+            amt = getattr(p, "amount", None)
+            if amt is None:
+                continue
+            row_id = getattr(p, "id_", None)
+            if row_id is None:
+                continue
+            out.append(
+                {
+                    "id": str(row_id),
+                    "amount_eur": Decimal(str(amt.value)).quantize(Decimal("0.01")),
+                    "description": getattr(p, "description", "") or "",
+                    "created_at": _bunq_dt_to_iso(getattr(p, "created", None)),
+                }
+            )
+        except Exception as exc:
+            log.warning("skipping bad bunq Payment row: %s", exc)
             continue
-        out.append(
-            {
-                "id": str(p.id_),
-                "amount_eur": Decimal(str(amt.value)).quantize(Decimal("0.01")),
-                "description": getattr(p, "description", "") or "",
-                "created_at": getattr(p, "created", None),
-            }
-        )
     return out
+
+
+def _bunq_dt_to_iso(raw: Any) -> str | None:
+    """Convert bunq's "YYYY-MM-DD HH:MM:SS.ffffff" wire format to an ISO 8601
+    string the FastAPI/Pydantic and iOS decoders accept."""
+    if raw is None:
+        return None
+    if isinstance(raw, datetime):
+        return raw.isoformat()
+    s = str(raw).strip()
+    if not s:
+        return None
+    # bunq returns naive UTC timestamps; mark as UTC so downstream consumers
+    # don't get tripped up by the timezone-less default.
+    candidates = (s, s.replace(" ", "T"))
+    for cand in candidates:
+        try:
+            dt = datetime.fromisoformat(cand)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+            return dt.isoformat()
+        except ValueError:
+            continue
+    return None
 
 
 # ---------------------------------------------------------------------------

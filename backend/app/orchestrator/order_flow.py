@@ -30,9 +30,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters import grocery_mcp
-from app.adapters.grocery_mcp import GroceryMcpError
-from app.background.bunq_poll import poll_until_paid
+from app.adapters import bunq_me
 from app.models import Cart as CartModel
 from app.models import CartItem as CartItemModel
 from app.models import MealConsumed
@@ -102,21 +100,14 @@ async def _checkout_bunq_me(
     amount: float,
     description: str,
 ) -> CheckoutResponse:
-    try:
-        payload = await grocery_mcp.create_payment_request(amount, description)
-    except GroceryMcpError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"grocery-mcp create_payment_request failed: {exc}",
-        ) from exc
-
-    request_id = str(payload.get("request_id") or "")
-    payment_url = str(payload.get("payment_url") or "")
-    if not request_id or not payment_url:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="grocery-mcp returned an incomplete payment payload",
-        )
+    # Build a production bunq.me URL directly (no sandbox API). Sandbox URLs
+    # don't open the real iDEAL flow, and the demo wants to show what a
+    # customer would actually see in the browser. The order stays in
+    # "ready_to_pay" until the user taps "I already paid" in the app, which
+    # POSTs to /orders/{id}/mark-paid.
+    payload = bunq_me.build_payment_url(amount, description)
+    request_id = payload["request_id"]
+    payment_url = payload["payment_url"]
 
     order = OrderModel(
         owner_id=user_id,
@@ -140,14 +131,6 @@ async def _checkout_bunq_me(
             "status": "ready_to_pay",
             "payment_method": "bunq_me",
         },
-    )
-
-    asyncio.create_task(
-        poll_until_paid(
-            user_id=user_id,
-            order_id=order.id,
-            request_id=request_id,
-        )
     )
 
     if cart.selected_store == "picnic":
@@ -276,6 +259,45 @@ async def _active_picnic_items(
     return [{"product_id": r.product_id, "qty": int(r.qty)} for r in rows]
 
 
+async def mark_paid(
+    *, db: AsyncSession, user_id: uuid.UUID, order_id: uuid.UUID
+) -> Order:
+    """Manual paid transition for the bunq.me path.
+
+    With production bunq.me URLs we don't poll a sandbox tab anymore — the
+    user taps 'I already paid' after the iDEAL flow completes in the browser
+    and iOS calls this endpoint. Idempotent: returns the existing paid order
+    if it's already paid; refuses anything that isn't currently
+    `ready_to_pay`."""
+    row = await _load_order(db, order_id, user_id)
+    if row.status == "paid":
+        return _to_schema(row)
+    if row.status != "ready_to_pay":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"order is in status '{row.status}'; cannot mark paid",
+        )
+
+    row.status = "paid"
+    row.paid_at = datetime.now(UTC)
+    await autolog_meal_for_order(db, row)
+    await db.commit()
+    await db.refresh(row)
+
+    await hub.publish(
+        user_id,
+        EventName.ORDER_STATUS,
+        {
+            "order_id": str(row.id),
+            "status": "paid",
+            "paid_at": row.paid_at.isoformat() if row.paid_at else None,
+            "payment_method": row.payment_method,
+        },
+    )
+
+    return _to_schema(row)
+
+
 async def get_order(
     *, db: AsyncSession, user_id: uuid.UUID, order_id: uuid.UUID
 ) -> Order:
@@ -290,12 +312,19 @@ async def list_orders(
     status_filter: OrderStatus | None,
     limit: int,
 ) -> list[Order]:
-    stmt = select(OrderModel).where(OrderModel.owner_id == user_id)
+    # Outer-join to recipes via the cart so the history screen can show a
+    # human-readable meal name without a follow-up fetch per row.
+    stmt = (
+        select(OrderModel, RecipeModel.name)
+        .outerjoin(CartModel, CartModel.id == OrderModel.cart_id)
+        .outerjoin(RecipeModel, RecipeModel.id == CartModel.recipe_id)
+        .where(OrderModel.owner_id == user_id)
+    )
     if status_filter is not None:
         stmt = stmt.where(OrderModel.status == status_filter)
     stmt = stmt.order_by(OrderModel.created_at.desc()).limit(limit)
-    rows = (await db.execute(stmt)).scalars().all()
-    return [_to_schema(r) for r in rows]
+    rows = (await db.execute(stmt)).all()
+    return [_to_schema(order, recipe_name=name) for order, name in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -337,7 +366,7 @@ async def _active_total(db: AsyncSession, cart_id: uuid.UUID, store: str) -> flo
     return round(sum(r.total_price_eur for r in rows), 2)
 
 
-def _to_schema(row: OrderModel) -> Order:
+def _to_schema(row: OrderModel, recipe_name: str | None = None) -> Order:
     return Order(
         id=row.id,
         cart_id=row.cart_id,
@@ -351,4 +380,5 @@ def _to_schema(row: OrderModel) -> Order:
         paid_at=row.paid_at,
         fulfilled_at=row.fulfilled_at,
         created_at=row.created_at,
+        recipe_name=recipe_name,
     )

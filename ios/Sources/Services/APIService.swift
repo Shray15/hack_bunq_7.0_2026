@@ -317,6 +317,41 @@ class APIService {
         catch { throw APIError.decoding(error) }
     }
 
+    /// `GET /orders?status=paid&limit=...`. Returns the user's paid order
+    /// history with the recipe name backfilled by the backend join.
+    func getPaidOrders(limit: Int = 50) async throws -> [Order] {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return []
+        }
+        guard let url = URL(string: "\(baseURL)/orders?status=paid&limit=\(limit)") else {
+            throw APIError.invalidURL
+        }
+        let req = authedRequest(url: url, method: "GET")
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode([Order].self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    /// `POST /orders/{order_id}/mark-paid`. The bunq.me path uses production
+    /// URLs that we can't poll for status; the user taps "I already paid"
+    /// after the iDEAL flow and iOS calls this to flip the order to paid in
+    /// the backend (so it ends up in order history + autologs the meal).
+    @discardableResult
+    func markOrderPaid(orderId: String) async throws -> Void {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return
+        }
+        guard let url = URL(string: "\(baseURL)/orders/\(orderId)/mark-paid") else {
+            throw APIError.invalidURL
+        }
+        let req = authedRequest(url: url, method: "POST")
+        let (data, response) = try await URLSession.shared.data(for: req)
+        _ = try await handle(data, response)
+    }
+
     // MARK: - Meal card
 
     /// `GET /meal-card/current`. Returns nil on a 404 (no card for the current

@@ -43,6 +43,8 @@
 		A1B2C3D4E5F60718293A4C01 /* MealShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C11 /* MealShare.swift */; };
 		A1B2C3D4E5F60718293A4C02 /* PaymentMethodPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C12 /* PaymentMethodPicker.swift */; };
 		A1B2C3D4E5F60718293A4C03 /* ShareCostSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C13 /* ShareCostSheet.swift */; };
+		A1B2C3D4E5F60718293A4D01 /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4D11 /* Order.swift */; };
+		A1B2C3D4E5F60718293A4D02 /* OrderHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4D12 /* OrderHistoryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +86,8 @@
 		A1B2C3D4E5F60718293A4C11 /* MealShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealShare.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4C12 /* PaymentMethodPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentMethodPicker.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4C13 /* ShareCostSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCostSheet.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4D11 /* Order.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Order.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4D12 /* OrderHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderHistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -133,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				EE94EFD0BE6F520EB8A84BE1 /* ProfileView.swift */,
+				A1B2C3D4E5F60718293A4D12 /* OrderHistoryView.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -253,6 +258,7 @@
 				EE09F2EB08A930286FCF01AF /* Cart.swift */,
 				A1B2C3D4E5F60718293A4B11 /* MealCard.swift */,
 				A1B2C3D4E5F60718293A4C11 /* MealShare.swift */,
+				A1B2C3D4E5F60718293A4D11 /* Order.swift */,
 				D1E61EA7D8BF9EB1387AE2D1 /* Recipe.swift */,
 				C93321052CCDE95460388F94 /* UserProfile.swift */,
 			);
@@ -348,6 +354,8 @@
 				A1B2C3D4E5F60718293A4C01 /* MealShare.swift in Sources */,
 				A1B2C3D4E5F60718293A4C02 /* PaymentMethodPicker.swift in Sources */,
 				A1B2C3D4E5F60718293A4C03 /* ShareCostSheet.swift in Sources */,
+				A1B2C3D4E5F60718293A4D01 /* Order.swift in Sources */,
+				A1B2C3D4E5F60718293A4D02 /* OrderHistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

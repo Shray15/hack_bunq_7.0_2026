@@ -30,6 +30,7 @@ class Order(AppModel):
     paid_at: datetime | None
     fulfilled_at: datetime | None
     created_at: datetime
+    recipe_name: str | None = None
 
 
 class CheckoutRequest(AppModel):
