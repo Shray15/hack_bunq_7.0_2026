@@ -135,13 +135,57 @@ async def select_store(
         2,
     )
 
-    # The Picnic cart commit moved to order_flow.checkout — committing it here
-    # would push the full basket before the user has had a chance to skip any
-    # items, so the real Picnic cart would never reflect the iOS toggles.
+    # The Picnic cart commit moved to commit_to_store — firing it here would
+    # push the full basket before the user has had any chance to skip items,
+    # so the real Picnic cart would never reflect the iOS toggles. iOS calls
+    # /cart/{id}/commit explicitly when the user taps "Add to cart".
 
     return CartItemsResponse(
         cart_id=cart.id,
         selected_store=store,
+        total_eur=total,
+        items=items,
+    )
+
+
+async def commit_to_store(
+    *,
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    cart_id: uuid.UUID,
+) -> CartItemsResponse:
+    """User finished editing the basket — push the active items into the real
+    store cart (Picnic only; AH has no programmatic write). Idempotent because
+    `commit_picnic_cart` clears the cart before re-adding, so iOS can call
+    this every time the user taps Add-to-cart and the cart will always match
+    the current basket.
+    """
+    cart = await _load_cart(db, cart_id, user_id)
+    if cart.selected_store is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cart has no selected_store; call /cart/{id}/select-store first",
+        )
+
+    items_rows = await _load_cart_items(db, cart_id, cart.selected_store)
+    items = [_to_schema(row) for row in items_rows]
+    total = round(
+        sum(row.total_price_eur for row in items_rows if row.removed_at is None),
+        2,
+    )
+
+    if cart.selected_store == "picnic":
+        active_items = [
+            {"product_id": row.product_id, "qty": int(row.qty)}
+            for row in items_rows
+            if row.removed_at is None
+        ]
+        if active_items:
+            asyncio.create_task(commit_picnic_cart_safely(active_items))
+
+    return CartItemsResponse(
+        cart_id=cart.id,
+        selected_store=cart.selected_store,
         total_eur=total,
         items=items,
     )

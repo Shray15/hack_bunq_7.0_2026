@@ -39,26 +39,16 @@ struct HomeView: View {
                             }
                         }
 
-                        VStack(alignment: .leading, spacing: 14) {
-                            AppSectionHeader(
-                                "Today's meals",
-                                eyebrow: "Daily brief"
-                            )
+                        RightNowCard(
+                            suggestion: rightNowSuggestion,
+                            primaryAction: handleRightNowAction
+                        )
 
-                            ForEach(appState.plannedMeals) { meal in
-                                MealRow(meal: meal) {
-                                    handleMealTap(meal)
-                                }
-                            }
-                        }
-
-                        Button {
-                            selectedTab = 1
-                        } label: {
-                            Label("Plan a meal", systemImage: "sparkles")
-                        }
-                        .buttonStyle(AppPrimaryButtonStyle())
-                        .accessibilityLabel("Plan a meal with the assistant")
+                        MacrosStrip(
+                            protein: macroProgress(consumed: appState.consumedProtein, target: appState.macroTargets.protein),
+                            carbs: macroProgress(consumed: appState.consumedCarbs, target: appState.macroTargets.carbs),
+                            fat: macroProgress(consumed: appState.consumedFat, target: appState.macroTargets.fat)
+                        )
                     }
                     .appScrollContentPadding()
                 }
@@ -173,17 +163,231 @@ struct HomeView: View {
         Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
     }
 
-    // MARK: - Actions
+    // MARK: - Right-now suggestion
 
-    private func handleMealTap(_ meal: PlannedMeal) {
-        if let recipe = meal.recipe {
-            selectedRecipe = recipe
-        } else if meal.isPlanned {
-            selectedTab = 3
-        } else {
-            appState.requestPlanning(for: meal.slot)
-            selectedTab = 1
+    /// Reads the current context (post-workout window, time of day, remaining
+    /// calories, planned meals) and returns the most useful single suggestion.
+    /// Drives the home-screen hero card so the demo always shows a smart,
+    /// timely action instead of three half-empty meal slots.
+    private var rightNowSuggestion: RightNowSuggestion {
+        let unplanned = appState.plannedMeals.filter { !$0.isPlanned }
+        let remaining = max(appState.remainingCalories, 0)
+
+        // Post-workout always wins — a fresh workout has the most actionable
+        // and demo-friendly framing.
+        if appState.isPostWorkoutWindow {
+            return RightNowSuggestion(
+                eyebrow: "Right now",
+                title: "Refuel from your workout",
+                body: "Aim for 35–45 g protein in the next hour. We'll cap calories around \(max(remaining, 500)).",
+                cta: "Plan a refuel meal",
+                action: .planSlot(unplanned.first?.slot ?? slotForCurrentTime),
+                accentIcon: "bolt.fill"
+            )
         }
+
+        // Everything planned, all macros tracked — celebrate.
+        if unplanned.isEmpty {
+            return RightNowSuggestion(
+                eyebrow: "Today",
+                title: "Day is locked in",
+                body: "All meals planned and groceries on the way. Add water or log a snack from the Track tab.",
+                cta: "Open Track",
+                action: .openTracker,
+                accentIcon: "checkmark.seal.fill"
+            )
+        }
+
+        // Pick the most relevant unplanned slot.
+        let target = unplanned.first { $0.slot.lowercased() == slotForCurrentTime.lowercased() }
+            ?? unplanned.first!
+        let lower = target.slot.lowercased()
+
+        return RightNowSuggestion(
+            eyebrow: "Right now",
+            title: "Time for \(lower)",
+            body: "About \(remaining) kcal left today. We'll fit it in your macros.",
+            cta: "Plan \(lower)",
+            action: .planSlot(target.slot),
+            accentIcon: "sparkles"
+        )
+    }
+
+    private var slotForCurrentTime: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 5..<11:  return "Breakfast"
+        case 11..<16: return "Lunch"
+        default:      return "Dinner"
+        }
+    }
+
+    private func handleRightNowAction(_ action: RightNowAction) {
+        switch action {
+        case .planSlot(let slot):
+            appState.requestPlanning(for: slot)
+            selectedTab = 1
+        case .openTracker:
+            selectedTab = 3
+        }
+    }
+
+    private func macroProgress(consumed: Int, target: Int) -> MacroProgress {
+        MacroProgress(
+            consumed: consumed,
+            target: max(target, 1),
+            remaining: max(target - consumed, 0)
+        )
+    }
+}
+
+// MARK: - Right-now suggestion model
+
+enum RightNowAction {
+    case planSlot(String)
+    case openTracker
+}
+
+struct RightNowSuggestion {
+    let eyebrow: String
+    let title: String
+    let body: String
+    let cta: String
+    let action: RightNowAction
+    let accentIcon: String
+}
+
+struct RightNowCard: View {
+    let suggestion: RightNowSuggestion
+    let primaryAction: (RightNowAction) -> Void
+
+    var body: some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppTheme.primary, AppTheme.accent],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        Image(systemName: suggestion.accentIcon)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 44, height: 44)
+                    .shadow(color: AppTheme.primary.opacity(0.28), radius: 10, y: 6)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(suggestion.eyebrow)
+                            .font(.caption2.weight(.bold))
+                            .tracking(1.2)
+                            .textCase(.uppercase)
+                            .foregroundStyle(AppTheme.primary)
+                        Text(suggestion.title)
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(AppTheme.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                Text(suggestion.body)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    primaryAction(suggestion.action)
+                } label: {
+                    Label(suggestion.cta, systemImage: "sparkles")
+                }
+                .buttonStyle(AppPrimaryButtonStyle())
+            }
+        }
+    }
+}
+
+// MARK: - Macros strip
+
+struct MacroProgress {
+    let consumed: Int
+    let target: Int
+    let remaining: Int
+
+    var fraction: Double {
+        guard target > 0 else { return 0 }
+        return min(Double(consumed) / Double(target), 1)
+    }
+}
+
+struct MacrosStrip: View {
+    let protein: MacroProgress
+    let carbs: MacroProgress
+    let fat: MacroProgress
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Macros today")
+                .font(.caption2.weight(.bold))
+                .tracking(1.2)
+                .textCase(.uppercase)
+                .foregroundStyle(AppTheme.secondaryText)
+
+            HStack(spacing: 10) {
+                HomeMacroChip(label: "Protein", unit: "g", progress: protein, tint: AppTheme.primary)
+                HomeMacroChip(label: "Carbs", unit: "g", progress: carbs, tint: AppTheme.accent)
+                HomeMacroChip(label: "Fat", unit: "g", progress: fat, tint: AppTheme.success)
+            }
+        }
+    }
+}
+
+struct HomeMacroChip: View {
+    let label: String
+    let unit: String
+    let progress: MacroProgress
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.secondaryText)
+
+            Text("\(progress.consumed)\(unit)")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.text)
+                .monospacedDigit()
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(tint.opacity(0.14))
+                    Capsule()
+                        .fill(tint)
+                        .frame(width: max(geo.size.width * progress.fraction, 6))
+                }
+            }
+            .frame(height: 6)
+
+            Text("\(progress.remaining)\(unit) left")
+                .font(.caption2)
+                .foregroundStyle(AppTheme.secondaryText)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.card)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(AppTheme.stroke, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: tint.opacity(0.10), radius: 12, y: 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(progress.consumed) of \(progress.target) \(unit), \(progress.remaining) left")
     }
 }
 
@@ -242,13 +446,13 @@ struct PostWorkoutBanner: View {
 
     var body: some View {
         Button(action: action) {
-            AppCard(padding: 14, background: Color(red: 0.94, green: 0.91, blue: 0.98)) {
+            AppCard(padding: 14, background: AppTheme.softPanel) {
                 HStack(spacing: 14) {
                     Image(systemName: "figure.strengthtraining.traditional")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.purple)
+                        .foregroundStyle(AppTheme.accent)
                         .frame(width: 38, height: 38)
-                        .background(Color.purple.opacity(0.14))
+                        .background(AppTheme.accent.opacity(0.14))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -285,7 +489,7 @@ struct DeliveryBanner: View {
 
     var body: some View {
         Button(action: action) {
-            AppCard(padding: 14, background: Color(red: 0.90, green: 0.97, blue: 0.93)) {
+            AppCard(padding: 14, background: AppTheme.success.opacity(0.10)) {
                 HStack(spacing: 14) {
                     Image(systemName: "shippingbox.fill")
                         .font(.subheadline.weight(.semibold))
@@ -324,7 +528,7 @@ struct MealRow: View {
 
     var body: some View {
         Button(action: action) {
-            AppCard(background: meal.recipe == nil ? Color(red: 0.95, green: 0.98, blue: 0.96) : AppTheme.card) {
+            AppCard(background: meal.recipe == nil ? AppTheme.mutedCard.opacity(0.6) : AppTheme.card) {
                 HStack(spacing: 14) {
                     RemoteImageView(url: meal.displayImageURL, cornerRadius: 20) {
                         ZStack {

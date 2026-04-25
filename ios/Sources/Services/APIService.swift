@@ -266,6 +266,28 @@ class APIService {
         _ = try await handle(data, response)
     }
 
+    /// `POST /cart/{cart_id}/commit` — push the cart's current active items
+    /// into the real grocery cart (Picnic only; AH has no programmatic
+    /// write). Idempotent: the backend clears the real cart before re-adding,
+    /// so calling this every Add-to-cart tap keeps picnic.app in sync.
+    @discardableResult
+    func commitCart(cartId: String) async throws -> CartItemsResponse {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return MockData.itemsResponse(for: "picnic")
+        }
+
+        guard let url = URL(string: "\(baseURL)/cart/\(cartId)/commit") else {
+            throw APIError.invalidURL
+        }
+        let req = authedRequest(url: url, method: "POST")
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(CartItemsResponse.self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
     // MARK: - Checkout
 
     /// `POST /order/checkout`. With `paymentMethod = .bunqMe` (default) this

@@ -190,7 +190,7 @@ struct OrderReviewView: View {
     }
 
     private var summaryCard: some View {
-        AppCard(background: Color(red: 0.90, green: 0.97, blue: 0.93)) {
+        AppCard(background: AppTheme.softPanel) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     AppTag(StoreCatalog.displayName(for: store), color: AppTheme.success, icon: "cart.fill")
@@ -243,27 +243,30 @@ struct OrderReviewView: View {
     }
 
     private var payButton: some View {
-        Button {
-            Task { await vm.checkout(cartId: cartId) }
-        } label: {
-            Group {
-                if vm.isOrdering {
-                    ProgressView()
-                        .tint(.white)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Label(payButtonLabel, systemImage: payButtonIcon)
+        VStack(spacing: 8) {
+            Button {
+                Task { await vm.checkout(cartId: cartId) }
+            } label: {
+                Group {
+                    if vm.isOrdering {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Label(payButtonLabel, systemImage: payButtonIcon)
+                    }
                 }
             }
+            .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.primary))
+            .disabled(vm.isOrdering)
+
+            BunqAttribution(.inline)
         }
-        .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.success))
         .padding(.horizontal, 20)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(.ultraThinMaterial)
-        .disabled(vm.isOrdering)
     }
-
     private var payButtonLabel: String {
         let amount = String(format: "%.2f", totalEur)
         switch vm.selectedMethod {

@@ -67,6 +67,7 @@
 		6F70819203A4B5C6D7E8F9AC /* RealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeService.swift; sourceTree = "<group>"; };
 		7F8E9D0C1B2A3F4E5D6C7B8A /* UserStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserStore.swift; sourceTree = "<group>"; };
 		0E9D8C7B6A5F4E3D2C1B0A9F /* OrderReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderReviewView.swift; sourceTree = "<group>"; };
+		1F2E3D4C5B6A09081726354F /* CookingCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CookingCompanion.entitlements; sourceTree = "<group>"; };
 		AF1F4E7CA969A430D809FA0A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C93321052CCDE95460388F94 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		CCFB128D3799CA0D3B018436 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -218,6 +219,7 @@
 			isa = PBXGroup;
 			children = (
 				0E359E738548C9546E72F420 /* Info.plist */,
+				1F2E3D4C5B6A09081726354F /* CookingCompanion.entitlements */,
 				86C951173F0A5C253520B8EB /* App */,
 				85A7ACFD4005B0D7E0301B38 /* Fixtures */,
 				E623D4EC2B207C7EB36F2ADF /* Models */,
@@ -366,6 +368,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/CookingCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = 5U285JJ887;
 				INFOPLIST_FILE = Sources/Info.plist;
@@ -385,6 +388,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/CookingCompanion.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = 5U285JJ887;
 				INFOPLIST_FILE = Sources/Info.plist;

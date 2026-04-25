@@ -102,7 +102,7 @@ struct StoreComparisonView: View {
     private func contentState(_ response: CartComparisonResponse) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                AppCard(background: Color(red: 0.90, green: 0.97, blue: 0.93)) {
+                AppCard(background: AppTheme.softPanel) {
                     VStack(alignment: .leading, spacing: 8) {
                         AppTag("Same recipe", color: AppTheme.success, icon: "fork.knife")
                         Text(recipe.name)

@@ -215,12 +215,13 @@ async def test_cart_404_for_other_users_cart(client: AsyncClient) -> None:
     assert bobs_view.status_code == 404
 
 
-async def test_picnic_commit_deferred_to_checkout(
+async def test_picnic_commit_fires_on_add_to_cart(
     client: AsyncClient,
 ) -> None:
-    """The real Picnic cart must only be touched once the user actually checks
-    out — committing it at /select-store would push the full basket before
-    iOS-side skip toggles have had a chance to PATCH any items as removed.
+    """iOS' Add-to-cart tap calls POST /cart/{id}/commit — that's the natural
+    "I'm done editing" moment and must push the kept items into the real
+    Picnic cart. Without this, picnic.app would only update once the user
+    actually pays via bunq, breaking the Add-to-cart mental model.
     """
     from app.adapters import grocery_mcp
     from app.adapters.grocery_mcp import StubGroceryMcpClient
@@ -256,8 +257,8 @@ async def test_picnic_commit_deferred_to_checkout(
         "afterwards would never reach the real cart"
     )
 
-    # Skip the most expensive item, then check out. Only the kept items
-    # should land in the real Picnic cart.
+    # Skip the most expensive item, then call /commit (the Add-to-cart
+    # endpoint). Only the kept items should land in the real Picnic cart.
     target = max(pic_items, key=lambda i: i["total_price_eur"])
     patched = await client.patch(
         f"/cart/{cart['cart_id']}/items/{target['id']}",
@@ -266,15 +267,16 @@ async def test_picnic_commit_deferred_to_checkout(
     )
     assert patched.status_code == 200
 
-    co = await client.post(
-        "/order/checkout", json={"cart_id": cart["cart_id"]}, headers=headers
+    commit_resp = await client.post(
+        f"/cart/{cart['cart_id']}/commit",
+        headers=headers,
     )
-    assert co.status_code == 200, co.text
+    assert commit_resp.status_code == 200, commit_resp.text
 
     # The Picnic commit runs as a fire-and-forget task; give it a tick.
     await asyncio.sleep(0.1)
 
-    assert stub.committed_picnic_calls, "commit_picnic_cart never fired on checkout"
+    assert stub.committed_picnic_calls, "commit_picnic_cart never fired on /commit"
     last_call = stub.committed_picnic_calls[-1]
     expected_count = sum(1 for i in pic_items if i["removed_at"] is None) - 1
     assert len(last_call) == expected_count, (
