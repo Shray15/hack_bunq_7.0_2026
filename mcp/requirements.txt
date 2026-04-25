@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+requests
+bunq-sdk
+python-dotenv
+python-picnic-api2
