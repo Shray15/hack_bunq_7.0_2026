@@ -40,9 +40,12 @@ async def run_chat_flow(
     people: int = 1,
 ) -> None:
     """Voice/text → recipe pipeline. Pushes SSE events; returns nothing."""
+    log.info("chat_flow_start: chat_id=%s user=%s", chat_id, user_id)
     try:
         nlu = await claude.parse_transcript_to_constraints(transcript, profile)
+        log.info("chat_flow_nlu_done: dish=%r chat_id=%s", nlu.dish.name, chat_id)
     except BedrockError as exc:
+        log.error("chat_flow_nlu_failed: chat_id=%s error=%s", chat_id, exc)
         await _emit_error(user_id, "nlu", "nlu_failed", str(exc), chat_id=chat_id)
         return
 
@@ -98,14 +101,19 @@ async def _generate_and_persist(
     return_recipe: bool = False,
 ) -> Recipe | None:
     dish = nlu.dish
+    log.info("recipe_pipeline_start: dish=%r chat_id=%s user=%s", dish.name, chat_id, user_id)
 
     try:
+        log.info("recipe_pipeline_step: generating ingredients+steps in parallel dish=%r", dish.name)
         ingredients, steps = await asyncio.gather(
             claude.generate_ingredients(dish, nlu.constraints, people),
             claude.generate_steps(dish),
         )
+        log.info("recipe_pipeline_step: ingredients=%d steps=%d — generating macros", len(ingredients), len(steps))
         macros = await claude.generate_macros(dish, ingredients)
+        log.info("recipe_pipeline_step: macros done calories=%d protein=%dg", macros.calories, macros.protein_g)
     except BedrockError as exc:
+        log.error("recipe_pipeline_bedrock_failed: dish=%r error=%s", dish.name, exc)
         await _emit_error(
             user_id, "recipe_generation", "bedrock_failed", str(exc), chat_id=chat_id
         )
@@ -123,6 +131,7 @@ async def _generate_and_persist(
             parent_recipe_id=parent_recipe_id,
         )
         recipe_payload = _row_to_schema(row)
+    log.info("recipe_pipeline_persisted: recipe_id=%s dish=%r", recipe_payload.id, dish.name)
 
     await hub.publish(
         user_id,
@@ -133,6 +142,7 @@ async def _generate_and_persist(
             "recipe": recipe_payload.model_dump(mode="json"),
         },
     )
+    log.info("recipe_pipeline_sse_sent: recipe_complete recipe_id=%s chat_id=%s", recipe_payload.id, chat_id)
 
     asyncio.create_task(
         generate_recipe_image(
@@ -142,6 +152,7 @@ async def _generate_and_persist(
             summary=dish.summary,
         )
     )
+    log.info("recipe_pipeline_image_task_spawned: recipe_id=%s dish=%r", recipe_payload.id, dish.name)
 
     return recipe_payload if return_recipe else None
 
