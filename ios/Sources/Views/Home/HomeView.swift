@@ -6,6 +6,8 @@ struct HomeView: View {
     @EnvironmentObject private var health: HealthKitService
     @State private var selectedRecipe: Recipe?
     @State private var showDeliveryDetails = false
+    @State private var showMealCardSetup = false
+    @State private var pushMealCardScreen = false
 
     private var displayName: String { appState.displayName }
 
@@ -17,6 +19,13 @@ struct HomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         heroCard
+
+                        MealCardTile(
+                            card: appState.currentMealCard,
+                            isLoading: appState.mealCardLoading && appState.currentMealCard == nil,
+                            onSetup: { showMealCardSetup = true },
+                            onOpen: { pushMealCardScreen = true }
+                        )
 
                         if appState.isPostWorkoutWindow, let endedAt = appState.lastWorkoutEndedAt {
                             PostWorkoutBanner(endedAt: endedAt) {
@@ -46,10 +55,23 @@ struct HomeView: View {
             }
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $pushMealCardScreen) {
+                MealCardScreen()
+            }
+            .task {
+                await appState.refreshMealCard()
+            }
+            .refreshable {
+                await appState.refreshMealCard()
+            }
             .sheet(item: $selectedRecipe) { recipe in
                 NavigationStack {
                     RecipeDetailView(recipe: recipe)
                 }
+            }
+            .sheet(isPresented: $showMealCardSetup) {
+                MealCardSetupView()
+                    .environmentObject(appState)
             }
             .alert("Delivery on the way", isPresented: $showDeliveryDetails) {
                 Button("OK", role: .cancel) {}

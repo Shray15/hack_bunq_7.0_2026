@@ -41,6 +41,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROCERY_MCP_URL: ${GROCERY_MCP_URL:-http://grocery-mcp:8001/mcp}
       BUNQ_DATA_DIR: /data/bunq
+      BUNQ_ME_USERNAME: ${BUNQ_ME_USERNAME:-HackBunqDemo}
     volumes:
       - /data/bunq:/data/bunq
     ports:

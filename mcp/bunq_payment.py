@@ -1,10 +1,14 @@
 import os
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from dotenv import load_dotenv
 from bunq.sdk.context.api_context import ApiContext
 from bunq.sdk.context.bunq_context import BunqContext
-from bunq.sdk.model.generated.endpoint import RequestInquiryApiObject
-from bunq.sdk.model.generated.object_ import AmountObject, PointerObject
+from bunq.sdk.model.generated.endpoint import (
+    BunqMeTabApiObject,
+    BunqMeTabEntryApiObject,
+)
+from bunq.sdk.model.generated.object_ import AmountObject
 
 load_dotenv()
 
@@ -26,12 +30,14 @@ def _resolve_account_id() -> int:
         "and BUNQ_ACCOUNT_ID env var unset. Run scripts/bootstrap_bunq.py."
     )
 
-# bunq RequestInquiry.status -> our public enum
+
+# bunq BunqMeTab.status -> our public enum
 _STATUS_MAP = {
-    "PENDING": "pending",
+    "WAITING_FOR_PAYMENT": "pending",
+    "PAID": "paid",
     "ACCEPTED": "paid",
+    "CANCELLED": "rejected",
     "REJECTED": "rejected",
-    "REVOKED": "rejected",
     "EXPIRED": "expired",
 }
 
@@ -41,32 +47,59 @@ def _load_context() -> None:
     BunqContext.load_api_context(ctx)
 
 
-def create_payment_request(amount_eur: float, description: str = "Groceries") -> dict:
-    """Mint a bunq sandbox payment request.
+def _format_eur(amount_eur: float) -> str:
+    amount = Decimal(str(amount_eur)).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
+    if amount <= 0:
+        raise ValueError("amount_eur must be greater than 0")
+    return f"{amount:.2f}"
 
-    Returns {"request_id": str, "payment_url": str}."""
+
+def create_payment_request(amount_eur: float, description: str = "Groceries") -> dict:
+    """Mint a fixed-amount bunq.me checkout link via BunqMeTab.
+
+    Returns {"request_id": str, "payment_url": str}. Raises if bunq does not
+    return a fixed-amount share URL — we never silently fall back to a
+    generic /pay link, since that would let the payer enter any amount."""
     _load_context()
     account_id = _resolve_account_id()
 
-    inquiry_id = RequestInquiryApiObject.create(
-        amount_inquired=AmountObject(str(round(amount_eur, 2)), "EUR"),
-        counterparty_alias=PointerObject("EMAIL", "sugardaddy@bunq.com"),
-        description=description,
-        allow_bunqme=True,
+    amount = _format_eur(amount_eur)
+
+    tab_id = BunqMeTabApiObject.create(
+        bunqme_tab_entry=BunqMeTabEntryApiObject(
+            amount_inquired=AmountObject(amount, "EUR"),
+            description=description,
+        ),
         monetary_account_id=account_id,
     ).value
 
-    inquiry = RequestInquiryApiObject.get(
-        request_inquiry_id=inquiry_id,
+    tab = BunqMeTabApiObject.get(
+        bunq_me_tab_id=tab_id,
         monetary_account_id=account_id,
     ).value
 
-    payment_url = inquiry.bunqme_share_url or f"https://bunq.me/pay/{inquiry_id}"
-    return {"request_id": str(inquiry_id), "payment_url": payment_url}
+    payment_url = getattr(tab, "bunqme_tab_share_url", None)
+    if not payment_url:
+        raise RuntimeError("bunq did not return bunqme_tab_share_url")
+
+    returned_amount = getattr(
+        getattr(tab, "bunqme_tab_entry", None),
+        "amount_inquired",
+        None,
+    )
+    if returned_amount and getattr(returned_amount, "value", amount) != amount:
+        raise RuntimeError(
+            f"bunq amount mismatch: expected {amount}, got {returned_amount.value}"
+        )
+
+    return {"request_id": str(tab_id), "payment_url": payment_url}
 
 
 def get_payment_status(request_id: str) -> dict:
-    """Look up the current status of a bunq payment request.
+    """Look up the current status of a bunq.me tab.
 
     Returns {"request_id": str, "status": "pending"|"paid"|"rejected"|"expired",
              "paid_at": str|None}.
@@ -74,16 +107,14 @@ def get_payment_status(request_id: str) -> dict:
     _load_context()
     account_id = _resolve_account_id()
 
-    inquiry = RequestInquiryApiObject.get(
-        request_inquiry_id=int(request_id),
+    tab = BunqMeTabApiObject.get(
+        bunq_me_tab_id=int(request_id),
         monetary_account_id=account_id,
     ).value
 
-    status = _STATUS_MAP.get(inquiry.status, "pending")
-    paid_at = None
-    if status == "paid":
-        # time_responded is when the counterparty accepted; preferred over `updated`
-        paid_at = getattr(inquiry, "time_responded", None) or getattr(inquiry, "updated", None)
+    status_raw = str(getattr(tab, "status", "")).upper()
+    status = _STATUS_MAP.get(status_raw, "pending")
+    paid_at = getattr(tab, "updated", None) if status == "paid" else None
 
     return {"request_id": str(request_id), "status": status, "paid_at": paid_at}
 

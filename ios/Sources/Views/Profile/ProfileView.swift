@@ -26,6 +26,7 @@ struct ProfileView: View {
                         goalsCard
                         dietCard
                         healthCard
+                        orderHistoryCard
                         signOutCard
 
                         BunqAttribution(.inline)
@@ -78,6 +79,38 @@ struct ProfileView: View {
                 Text("Saved recipes and local goals stay on this device. You can sign back in anytime.")
             }
         }
+    }
+
+    // MARK: - Order history
+
+    private var orderHistoryCard: some View {
+        NavigationLink {
+            OrderHistoryView()
+        } label: {
+            AppCard(padding: 16) {
+                HStack(spacing: 14) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(AppTheme.primary)
+                        .frame(width: 38, height: 38)
+                        .background(AppTheme.primary.opacity(0.14))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Order history")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.text)
+                        Text("All paid orders, meal-card and bunq.me.")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Sign out

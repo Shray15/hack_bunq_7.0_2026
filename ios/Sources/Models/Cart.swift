@@ -78,15 +78,23 @@ struct CartItemsResponse: Codable, Hashable {
 }
 
 /// Response of `POST /order/checkout`.
+///
+/// `paymentURL` is nil for the meal-card flow (the card is charged synchronously
+/// and the order is already `paid` by the time this response lands), and
+/// non-nil for the bunq.me flow.
 struct CheckoutResponse: Codable {
     let orderId: String?
-    let paymentURL: String
+    let paymentURL: String?
     let amountEur: Double
+    let paymentMethod: String
+    let status: String
 
     enum CodingKeys: String, CodingKey {
-        case orderId    = "order_id"
-        case paymentURL = "payment_url"
-        case amountEur  = "amount_eur"
+        case orderId        = "order_id"
+        case paymentURL     = "payment_url"
+        case amountEur      = "amount_eur"
+        case paymentMethod  = "payment_method"
+        case status
     }
 }
 

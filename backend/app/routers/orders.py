@@ -17,7 +17,19 @@ router = APIRouter(tags=["orders"])
 async def checkout(
     payload: CheckoutRequest, user_id: CurrentUserId, db: DbSession
 ) -> CheckoutResponse:
-    return await order_flow.checkout(db=db, user_id=user_id, cart_id=payload.cart_id)
+    return await order_flow.checkout(
+        db=db,
+        user_id=user_id,
+        cart_id=payload.cart_id,
+        payment_method=payload.payment_method,
+    )
+
+
+@router.post("/orders/{order_id}/mark-paid", response_model=Order)
+async def mark_order_paid(
+    order_id: uuid.UUID, user_id: CurrentUserId, db: DbSession
+) -> Order:
+    return await order_flow.mark_paid(db=db, user_id=user_id, order_id=order_id)
 
 
 @router.get("/orders/{order_id}", response_model=Order)

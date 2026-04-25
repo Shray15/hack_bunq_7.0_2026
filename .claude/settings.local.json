@@ -30,7 +30,9 @@
       "Bash(awk '/def __call__|def listen/,/^    async def [a-z]/' backend/.venv/lib/python3.12/site-packages/sse_starlette/sse.py)",
       "Bash(awk '/_stream_response/,/^    async def [a-z]/' backend/.venv/lib/python3.12/site-packages/sse_starlette/sse.py)",
       "Bash(xcodebuild -project CookingCompanion.xcodeproj -scheme CookingCompanion -destination 'generic/platform=iOS Simulator' -quiet build)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)"
     ]
   }
 }

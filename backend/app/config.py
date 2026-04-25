@@ -51,6 +51,16 @@ class Settings(BaseSettings):
     bunq_poll_interval_seconds: float = 2.0
     bunq_poll_max_seconds: float = 300.0
 
+    # Production-style bunq.me URLs (Phase iii). We construct
+    # `https://bunq.me/<handle>/<amount>/<description>` directly instead of
+    # minting a sandbox BunqMeTab — sandbox URLs don't open the real iDEAL
+    # flow, and the demo wants to show what a customer would actually see.
+    # Override via BUNQ_ME_USERNAME in deploy `.env`.
+    bunq_me_username: str = Field(
+        default="HackBunqDemo",
+        description="bunq.me handle used for production-style payment URLs.",
+    )
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"

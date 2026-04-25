@@ -341,6 +341,56 @@ enum MockData {
     static let checkoutResponse = CheckoutResponse(
         orderId: "order-mock-1",
         paymentURL: "https://bunq.me/HackBunqDemo/13.45/Groceries",
-        amountEur: 13.45
+        amountEur: 13.45,
+        paymentMethod: "bunq_me",
+        status: "ready_to_pay"
     )
+
+    /// Stubbed share-cost link for offline/preview use.
+    static func makeShareCost(
+        orderId: String,
+        participantCount: Int,
+        includeSelf: Bool
+    ) -> MealShare {
+        let total = 23.40
+        let divisor = participantCount + (includeSelf ? 1 : 0)
+        let perPerson = (total / Double(divisor) * 100).rounded() / 100
+        return MealShare(
+            id: "mock-share-\(UUID().uuidString.prefix(6))",
+            orderId: orderId,
+            participantCount: participantCount,
+            includeSelf: includeSelf,
+            perPersonEur: perPerson,
+            totalEur: total,
+            shareURL: "https://bunq.me/HackBunqDemo/\(perPerson)/Share",
+            bunqRequestId: "mock-tab-\(UUID().uuidString.prefix(8))",
+            status: "open",
+            createdAt: Date()
+        )
+    }
+
+    /// Stubbed meal card for offline/preview use. Month is the current month
+    /// so the rest of the app reads it as "active".
+    static func makeMealCard(budgetEur: Double, balanceEur: Double) -> MealCard {
+        let now = Date()
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.year, .month], from: now)
+        let year = comps.year ?? 2026
+        let month = comps.month ?? 1
+        let monthYear = String(format: "%04d-%02d", year, month)
+        let endOfMonth = cal.date(
+            from: DateComponents(year: year, month: month + 1, day: 1)
+        )?.addingTimeInterval(-1) ?? now
+        return MealCard(
+            id: "mock-card-\(monthYear)",
+            monthYear: monthYear,
+            monthlyBudgetEur: budgetEur,
+            currentBalanceEur: balanceEur,
+            last4: "4242",
+            iban: "NL12BUNQ0123456789",
+            status: "active",
+            expiresAt: endOfMonth,
+            createdAt: now
+        )
+    }
 }

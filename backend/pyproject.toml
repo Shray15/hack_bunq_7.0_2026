@@ -21,6 +21,7 @@ dependencies = [
     "boto3>=1.35.0",
     "google-genai>=0.3.0",
     "mcp>=1.0.0",
+    "bunq-sdk>=1.27.0",
 ]
 
 [dependency-groups]
