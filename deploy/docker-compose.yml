@@ -1,0 +1,60 @@
+# EC2 docker-compose — sits at /opt/app/docker-compose.yml
+# All values in .env are written by the GHA deploy workflow.
+
+name: cooking
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cooking}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-cooking}
+    volumes:
+      - /data/postgres:/var/lib/postgresql/data
+    networks:
+      - cooking_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cooking} -d ${POSTGRES_DB:-cooking}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    image: ${IMAGE:?IMAGE is required (set in .env, e.g. ghcr.io/owner/repo:main-abc1234)}
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      VERSION: ${VERSION:-unknown}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cooking}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cooking}
+      JWT_SECRET: ${JWT_SECRET:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AGENTCORE_MEMORY_ROLE_ARN: ${AGENTCORE_MEMORY_ROLE_ARN:-}
+      AWS_BEDROCK_MODEL_ID: ${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-5-20250929-v1:0}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      BUNQ_API_KEY: ${BUNQ_API_KEY:-}
+      BUNQ_INSTALLATION_TOKEN: ${BUNQ_INSTALLATION_TOKEN:-}
+    ports:
+      - "4567:4567"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cooking_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4567/healthz').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+networks:
+  cooking_net:
+    driver: bridge
