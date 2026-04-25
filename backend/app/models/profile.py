@@ -30,7 +30,7 @@ class Profile(Base):
     store_priority: Mapped[list[str]] = mapped_column(
         JSONB,
         nullable=False,
-        default=lambda: ["ah", "jumbo", "picnic"],
+        default=lambda: ["ah", "picnic"],
     )
     extra: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 

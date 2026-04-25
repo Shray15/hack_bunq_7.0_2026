@@ -19,7 +19,7 @@ async def test_signup_login_profile_roundtrip(client: AsyncClient) -> None:
     profile = await client.get("/user/profile", headers=headers)
     assert profile.status_code == 200, profile.text
     body = profile.json()
-    assert body["store_priority"] == ["ah", "jumbo", "picnic"]
+    assert body["store_priority"] == ["ah", "picnic"]
     assert body["allergies"] == []
 
     patched = await client.patch(

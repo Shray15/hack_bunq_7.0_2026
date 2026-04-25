@@ -1,9 +1,12 @@
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
 from app.schemas.cart import (
     Cart,
+    CartComparisonResponse,
     CartFromRecipeRequest,
     CartItem,
     CartItemPatch,
+    CartItemsResponse,
+    SelectStoreRequest,
     StoreComparison,
 )
 from app.schemas.common import Macros
@@ -31,9 +34,11 @@ from app.schemas.recipe import (
 
 __all__ = [
     "Cart",
+    "CartComparisonResponse",
     "CartFromRecipeRequest",
     "CartItem",
     "CartItemPatch",
+    "CartItemsResponse",
     "ChatAccepted",
     "ChatRequest",
     "CheckoutRequest",
@@ -57,6 +62,7 @@ __all__ = [
     "RecipeIngredient",
     "RecipeListResponse",
     "RecookResponse",
+    "SelectStoreRequest",
     "SignupRequest",
     "StoreComparison",
     "TokenResponse",

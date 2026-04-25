@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
 
+from app.adapters import grocery_mcp
 from app.config import settings
 from app.middleware import RequestIdMiddleware
 from app.routers import (
@@ -25,11 +28,21 @@ logging.basicConfig(
 )
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    await grocery_mcp.connect()
+    try:
+        yield
+    finally:
+        await grocery_mcp.aclose()
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Cooking Backend",
         version=settings.version,
         description="Voice-first cooking & health iOS app — backend orchestrator.",
+        lifespan=_lifespan,
     )
 
     app.add_middleware(RequestIdMiddleware)
@@ -40,6 +53,7 @@ def create_app() -> FastAPI:
             "ok": True,
             "version": settings.version,
             "environment": settings.environment,
+            "grocery_mcp_connected": grocery_mcp.is_configured(),
         }
 
     app.include_router(auth.router)

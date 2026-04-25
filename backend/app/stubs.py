@@ -1,7 +1,9 @@
-"""Stub data factories for Phase 1.
+"""Stub data factories.
 
-Returns plausible Pydantic objects so iOS can build against the wire shape
-of every endpoint before the real orchestrators land.
+Phase 1 used these for every endpoint. Phases 2 and 3 replaced the recipe,
+cart, and order paths with real orchestrators backed by Postgres + grocery-mcp.
+The remaining helpers feed the still-stubbed meals and meal-plan routers
+(Phase 4 will replace them).
 """
 
 from __future__ import annotations
@@ -10,19 +12,13 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from app.schemas import (
-    Cart,
-    CartItem,
     MealLog,
     MealOption,
     MealPlan,
-    Order,
     Recipe,
     RecipeIngredient,
-    StoreComparison,
 )
-from app.schemas.cart import Store
 from app.schemas.common import Macros
-from app.schemas.order import OrderStatus
 
 
 def _now() -> datetime:
@@ -58,78 +54,6 @@ def make_recipe(*, recipe_id: uuid.UUID | None = None, name: str = "Lemon Herb C
         source="chat",
         parent_recipe_id=None,
         favorited_at=None,
-        created_at=_now(),
-    )
-
-
-def make_cart(*, recipe_id: uuid.UUID, cart_id: uuid.UUID | None = None) -> Cart:
-    cid = cart_id or uuid.uuid4()
-    items: list[CartItem] = [
-        CartItem(
-            id=uuid.uuid4(),
-            ingredient_name="chicken breast",
-            store="ah",
-            product_id="ah-7421",
-            product_name="AH Kipfilet 500g",
-            qty=1,
-            unit_price_eur=6.99,
-            total_price_eur=6.99,
-        ),
-        CartItem(
-            id=uuid.uuid4(),
-            ingredient_name="jasmine rice",
-            store="ah",
-            product_id="ah-1102",
-            product_name="AH Jasmijnrijst 1kg",
-            qty=1,
-            unit_price_eur=2.49,
-            total_price_eur=2.49,
-        ),
-        CartItem(
-            id=uuid.uuid4(),
-            ingredient_name="lemon",
-            store="ah",
-            product_id="ah-9001",
-            product_name="AH Citroen los",
-            qty=1,
-            unit_price_eur=0.45,
-            total_price_eur=0.45,
-        ),
-    ]
-    comparison = [
-        StoreComparison(store="ah", total_eur=12.83, missing=[], item_count=6),
-        StoreComparison(store="jumbo", total_eur=11.97, missing=[], item_count=6),
-        StoreComparison(store="picnic", total_eur=13.20, missing=["parsley"], item_count=5),
-    ]
-    return Cart(
-        id=cid,
-        recipe_id=recipe_id,
-        status="open",
-        selected_store=None,
-        comparison=comparison,
-        items=items,
-        created_at=_now(),
-    )
-
-
-def make_order(
-    *,
-    cart_id: uuid.UUID,
-    store: Store = "ah",
-    order_id: uuid.UUID | None = None,
-    status: OrderStatus = "ready_to_pay",
-) -> Order:
-    oid = order_id or uuid.uuid4()
-    return Order(
-        id=oid,
-        cart_id=cart_id,
-        store=store,
-        total_eur=12.83,
-        bunq_payment_url=f"https://bunq.test/payment/{oid}",
-        bunq_request_id=f"req-{oid.hex[:12]}",
-        status=status,
-        paid_at=None,
-        fulfilled_at=None,
         created_at=_now(),
     )
 
