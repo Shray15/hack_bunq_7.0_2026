@@ -69,7 +69,7 @@ A phase is "done" when its exit criteria pass against the live EC2 deployment, n
 
 ## Phase 1 — Skeleton, auth, realtime stub
 
-**Goal:** Every endpoint from `backend_overview.md` §5 exists, returns realistic stub JSON shaped exactly like production responses, and is reachable over Cloudflare. JWT auth works end-to-end. iOS team is fully unblocked from now on.
+**Goal:** Every endpoint from `backend_overview.md` §5 exists, returns realistic stub JSON shaped exactly like production responses, and is reachable directly on `http://<ec2-ip>:4567`. JWT auth works end-to-end. iOS team is fully unblocked from now on.
 
 **Tasks**
 
@@ -91,7 +91,7 @@ A phase is "done" when its exit criteria pass against the live EC2 deployment, n
    - Heartbeat every 15 s (`event: ping`).
 6. **Stub routers** — every endpoint from `backend_overview.md` §5 returns realistic JSON matching the documented schema. For `/chat`, fire a series of canned SSE events to the user's stream over 3 seconds (`recipe_token` × N → `recipe_complete` → `image_ready`) so iOS can render the full flow against fake data.
 7. **CI checks** — GHA workflow runs `ruff`, `mypy`, `pytest` on every PR; required to pass before deploy.
-8. **OpenAPI** — confirm `/docs` is accessible behind Cloudflare; share URL with iOS team.
+8. **OpenAPI** — confirm `/docs` is accessible at `http://<ec2-ip>:4567/docs`; share URL with iOS team.
 
 **Exit criteria**
 
@@ -226,7 +226,7 @@ A phase is "done" when its exit criteria pass against the live EC2 deployment, n
 6. **Security review**
    - JWT secret rotated post-development.
    - Confirm `.env` on EC2 is mode 600 owned by docker user.
-   - Cloudflare Tunnel access policy (Zero Trust) optionally locked to your team email for `/docs`.
+   - EC2 security-group rule optionally restricting TCP 4567 to known IPs (team laptops, demo venue) once `/docs` and the API don't need to stay public.
 7. **Backup demo path**
    - Recorded video of full happy path.
    - Local "offline mode" toggle in settings: when set, all adapters return canned data so a network outage at the venue doesn't kill the demo.

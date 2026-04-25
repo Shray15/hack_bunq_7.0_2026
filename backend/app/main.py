@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import logging
-import uuid
-from collections.abc import Awaitable, Callable
-from contextvars import ContextVar
 from typing import Any
 
-from fastapi import FastAPI, Request
-from fastapi.responses import Response
+from fastapi import FastAPI
 
 from app.config import settings
+from app.middleware import RequestIdMiddleware
 from app.routers import (
     auth,
     cart,
@@ -21,8 +18,6 @@ from app.routers import (
     profile,
     recipes,
 )
-
-request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,18 +32,7 @@ def create_app() -> FastAPI:
         description="Voice-first cooking & health iOS app — backend orchestrator.",
     )
 
-    @app.middleware("http")
-    async def request_id_middleware(
-        request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        rid = request.headers.get("x-request-id") or uuid.uuid4().hex
-        token = request_id_var.set(rid)
-        try:
-            response = await call_next(request)
-        finally:
-            request_id_var.reset(token)
-        response.headers["x-request-id"] = rid
-        return response
+    app.add_middleware(RequestIdMiddleware)
 
     @app.get("/healthz", tags=["health"])
     async def healthz() -> dict[str, Any]:
