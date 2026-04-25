@@ -27,6 +27,7 @@ from app.background.bunq_poll import poll_until_paid
 from app.models import Cart as CartModel
 from app.models import CartItem as CartItemModel
 from app.models import Order as OrderModel
+from app.orchestrator.cart_flow import commit_picnic_cart_safely
 from app.realtime import EventName, hub
 from app.schemas import CheckoutResponse, Order
 from app.schemas.cart import Store
@@ -96,11 +97,32 @@ async def checkout(
         )
     )
 
+    # Picnic supports programmatic cart writes (AH does not). Now that the
+    # user has actually committed to the basket, push the non-removed items
+    # into their real Picnic cart so picnic.app shows the same selection.
+    # Moved from select_store so iOS-side skip toggles are honoured.
+    if cart.selected_store == "picnic":
+        active_items = await _active_picnic_items(db, cart_id)
+        if active_items:
+            asyncio.create_task(commit_picnic_cart_safely(active_items))
+
     return CheckoutResponse(
         order_id=order.id,
         payment_url=payment_url,
         amount_eur=order.total_eur,
     )
+
+
+async def _active_picnic_items(
+    db: AsyncSession, cart_id: uuid.UUID
+) -> list[dict[str, object]]:
+    stmt = select(CartItemModel).where(
+        CartItemModel.cart_id == cart_id,
+        CartItemModel.store == "picnic",
+        CartItemModel.removed_at.is_(None),
+    )
+    rows = list((await db.execute(stmt)).scalars().all())
+    return [{"product_id": r.product_id, "qty": int(r.qty)} for r in rows]
 
 
 async def get_order(

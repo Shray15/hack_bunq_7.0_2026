@@ -215,10 +215,13 @@ async def test_cart_404_for_other_users_cart(client: AsyncClient) -> None:
     assert bobs_view.status_code == 404
 
 
-async def test_select_store_picnic_commits_to_real_cart(
+async def test_picnic_commit_deferred_to_checkout(
     client: AsyncClient,
 ) -> None:
-    """Picking Picnic should fire commit_picnic_cart with the active items."""
+    """The real Picnic cart must only be touched once the user actually checks
+    out — committing it at /select-store would push the full basket before
+    iOS-side skip toggles have had a chance to PATCH any items as removed.
+    """
     from app.adapters import grocery_mcp
     from app.adapters.grocery_mcp import StubGroceryMcpClient
 
@@ -244,23 +247,51 @@ async def test_select_store_picnic_commits_to_real_cart(
         headers=headers,
     )
     assert sel.status_code == 200
+    pic_items = sel.json()["items"]
 
-    # The commit runs as a fire-and-forget asyncio task; give it a tick.
+    # Selecting the store alone must NOT commit anything to picnic.app yet.
+    await asyncio.sleep(0.1)
+    assert stub.committed_picnic_calls == [], (
+        "select-store committed to Picnic too early — exclusions PATCHed "
+        "afterwards would never reach the real cart"
+    )
+
+    # Skip the most expensive item, then check out. Only the kept items
+    # should land in the real Picnic cart.
+    target = max(pic_items, key=lambda i: i["total_price_eur"])
+    patched = await client.patch(
+        f"/cart/{cart['cart_id']}/items/{target['id']}",
+        json={"removed": True},
+        headers=headers,
+    )
+    assert patched.status_code == 200
+
+    co = await client.post(
+        "/order/checkout", json={"cart_id": cart["cart_id"]}, headers=headers
+    )
+    assert co.status_code == 200, co.text
+
+    # The Picnic commit runs as a fire-and-forget task; give it a tick.
     await asyncio.sleep(0.1)
 
-    assert stub.committed_picnic_calls, "commit_picnic_cart was never invoked"
+    assert stub.committed_picnic_calls, "commit_picnic_cart never fired on checkout"
     last_call = stub.committed_picnic_calls[-1]
-    pic_items = sel.json()["items"]
-    assert len(last_call) == sum(1 for i in pic_items if i["removed_at"] is None)
+    expected_count = sum(1 for i in pic_items if i["removed_at"] is None) - 1
+    assert len(last_call) == expected_count, (
+        f"expected {expected_count} active items in Picnic commit, got {len(last_call)}"
+    )
+    assert all(entry["product_id"] != target["product_id"] for entry in last_call), (
+        "removed item leaked into the Picnic commit"
+    )
     for entry in last_call:
         assert entry["product_id"].startswith("pic-")
         assert entry["qty"] >= 1
 
 
-async def test_select_store_ah_does_not_commit_to_picnic(
+async def test_ah_checkout_does_not_commit_to_picnic(
     client: AsyncClient,
 ) -> None:
-    """AH selection must NOT touch the Picnic cart."""
+    """AH selection + checkout must NOT touch the Picnic cart at any stage."""
     from app.adapters import grocery_mcp
     from app.adapters.grocery_mcp import StubGroceryMcpClient
 
@@ -282,6 +313,9 @@ async def test_select_store_ah_does_not_commit_to_picnic(
         f"/cart/{cart['cart_id']}/select-store",
         json={"store": "ah"},
         headers=headers,
+    )
+    await client.post(
+        "/order/checkout", json={"cart_id": cart["cart_id"]}, headers=headers
     )
     await asyncio.sleep(0.1)
     assert stub.committed_picnic_calls == []

@@ -135,18 +135,9 @@ async def select_store(
         2,
     )
 
-    # Picnic supports programmatic cart writes (AH does not). Push the active
-    # items into the user's real Picnic cart so the demo shows the same basket
-    # in picnic.app. Failures are logged but never block the response — the
-    # bunq URL flow stays the source of truth for payment.
-    if store == "picnic":
-        active_items = [
-            {"product_id": row.product_id, "qty": int(row.qty)}
-            for row in items_rows
-            if row.removed_at is None
-        ]
-        if active_items:
-            asyncio.create_task(_commit_picnic_cart_safely(active_items))
+    # The Picnic cart commit moved to order_flow.checkout — committing it here
+    # would push the full basket before the user has had a chance to skip any
+    # items, so the real Picnic cart would never reflect the iOS toggles.
 
     return CartItemsResponse(
         cart_id=cart.id,
@@ -156,7 +147,7 @@ async def select_store(
     )
 
 
-async def _commit_picnic_cart_safely(items: list[dict[str, object]]) -> None:
+async def commit_picnic_cart_safely(items: list[dict[str, object]]) -> None:
     try:
         result = await grocery_mcp.commit_picnic_cart(items)
         log.info(
