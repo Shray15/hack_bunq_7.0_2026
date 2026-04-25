@@ -218,16 +218,15 @@ class APIService {
 
         guard let url = URL(string: "\(baseURL)/cart/from-recipe") else { throw APIError.invalidURL }
 
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+        var req = authedRequest(url: url, method: "POST")
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
             "recipe_id": recipeId,
             "people": people,
         ])
 
-        let (data, _) = try await URLSession.shared.data(for: req)
-        do { return try decoder.decode(CartComparisonResponse.self, from: data) }
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(CartComparisonResponse.self, from: validData) }
         catch { throw APIError.decoding(error) }
     }
 
@@ -240,13 +239,12 @@ class APIService {
 
         guard let url = URL(string: "\(baseURL)/cart/\(cartId)/select-store") else { throw APIError.invalidURL }
 
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: ["store": store])
+        var req = authedRequest(url: url, method: "POST")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["store": store])
 
-        let (data, _) = try await URLSession.shared.data(for: req)
-        do { return try decoder.decode(CartItemsResponse.self, from: data) }
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(CartItemsResponse.self, from: validData) }
         catch { throw APIError.decoding(error) }
     }
 
