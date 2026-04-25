@@ -105,7 +105,7 @@ def _create_sub_account_sync(label: str, currency: str = "EUR") -> dict[str, Any
         currency=currency,
         description=label,
     ).value
-    account = MonetaryAccountBankApiObject.get(monetary_account_id=new_id).value
+    account = MonetaryAccountBankApiObject.get(new_id).value
     return {
         "monetary_account_id": int(new_id),
         "iban": _account_iban(account),
@@ -122,9 +122,7 @@ def _fund_sub_account_sync(
     primary_id = _resolve_primary_account_id()
     amount = _format_eur(amount_eur)
 
-    sub = MonetaryAccountBankApiObject.get(
-        monetary_account_id=monetary_account_id
-    ).value
+    sub = MonetaryAccountBankApiObject.get(monetary_account_id).value
     sub_iban = _account_iban(sub)
     sub_name = getattr(sub, "description", None) or "Meal card"
 
@@ -135,9 +133,7 @@ def _fund_sub_account_sync(
         monetary_account_id=primary_id,
     ).value
 
-    refreshed = MonetaryAccountBankApiObject.get(
-        monetary_account_id=monetary_account_id
-    ).value
+    refreshed = MonetaryAccountBankApiObject.get(monetary_account_id).value
     return {
         "payment_id": int(payment_id),
         "balance_after": _balance_decimal(refreshed),
@@ -195,9 +191,7 @@ def _issue_virtual_card_sync(
 
 def _get_balance_sync(monetary_account_id: int) -> Decimal:
     _load_context()
-    account = MonetaryAccountBankApiObject.get(
-        monetary_account_id=monetary_account_id
-    ).value
+    account = MonetaryAccountBankApiObject.get(monetary_account_id).value
     return _balance_decimal(account)
 
 
@@ -212,9 +206,7 @@ def _charge_card_sync(
     primary_id = _resolve_primary_account_id()
     amount = _format_eur(amount_eur)
 
-    primary = MonetaryAccountBankApiObject.get(
-        monetary_account_id=primary_id
-    ).value
+    primary = MonetaryAccountBankApiObject.get(primary_id).value
     primary_iban = _account_iban(primary)
     primary_name = getattr(primary, "description", None) or "Primary"
 
@@ -225,9 +217,7 @@ def _charge_card_sync(
         monetary_account_id=monetary_account_id,
     ).value
 
-    refreshed = MonetaryAccountBankApiObject.get(
-        monetary_account_id=monetary_account_id
-    ).value
+    refreshed = MonetaryAccountBankApiObject.get(monetary_account_id).value
     return {
         "payment_id": int(payment_id),
         "balance_after": _balance_decimal(refreshed),
