@@ -220,13 +220,13 @@ struct PostWorkoutBanner: View {
 
     var body: some View {
         Button(action: action) {
-            AppCard(padding: 14, background: Color(red: 0.94, green: 0.91, blue: 0.98)) {
+            AppCard(padding: 14, background: AppTheme.softPanel) {
                 HStack(spacing: 14) {
                     Image(systemName: "figure.strengthtraining.traditional")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.purple)
+                        .foregroundStyle(AppTheme.accent)
                         .frame(width: 38, height: 38)
-                        .background(Color.purple.opacity(0.14))
+                        .background(AppTheme.accent.opacity(0.14))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -263,7 +263,7 @@ struct DeliveryBanner: View {
 
     var body: some View {
         Button(action: action) {
-            AppCard(padding: 14, background: Color(red: 0.90, green: 0.97, blue: 0.93)) {
+            AppCard(padding: 14, background: AppTheme.success.opacity(0.10)) {
                 HStack(spacing: 14) {
                     Image(systemName: "shippingbox.fill")
                         .font(.subheadline.weight(.semibold))
@@ -302,7 +302,7 @@ struct MealRow: View {
 
     var body: some View {
         Button(action: action) {
-            AppCard(background: meal.recipe == nil ? Color(red: 0.95, green: 0.98, blue: 0.96) : AppTheme.card) {
+            AppCard(background: meal.recipe == nil ? AppTheme.mutedCard.opacity(0.6) : AppTheme.card) {
                 HStack(spacing: 14) {
                     RemoteImageView(url: meal.displayImageURL, cornerRadius: 20) {
                         ZStack {

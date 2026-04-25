@@ -64,7 +64,7 @@ struct OrderCheckoutView: View {
     }
 
     private var summaryCard: some View {
-        AppCard(background: Color(red: 0.90, green: 0.97, blue: 0.93)) {
+        AppCard(background: AppTheme.softPanel) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     AppTag(StoreCatalog.displayName(for: cart.selectedStore), color: AppTheme.success, icon: "cart.fill")
