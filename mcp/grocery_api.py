@@ -3,7 +3,7 @@ from math import inf
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from bunq_payment import create_payment_request
+from bunq_payment import create_payment_request, get_payment_status
 import ah_client
 import picnic_client
 
@@ -220,10 +220,16 @@ def checkout(req: CheckoutRequest):
     if not items:
         raise HTTPException(status_code=400, detail="Cart is empty. Call /cart/from-recipe first.")
     total = round(sum(i["subtotal_eur"] for i in items), 2)
-    payment_url = create_payment_request(total, req.description)
+    payment = create_payment_request(total, req.description)
     return {
-        "payment_url": payment_url,
+        "request_id": payment["request_id"],
+        "payment_url": payment["payment_url"],
         "amount_eur": total,
         "store": store,
         "items": items,
     }
+
+
+@app.get("/payments/{request_id}/status")
+def payment_status(request_id: str):
+    return get_payment_status(request_id)
