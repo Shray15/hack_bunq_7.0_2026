@@ -17,12 +17,12 @@ struct CartItem: Identifiable, Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case productId   = "product_id"
-        case ingredient
-        case productName = "name"
+        case ingredient  = "ingredient_name"
+        case productName = "product_name"
         case imageURL    = "image_url"
         case qty
         case unit
-        case priceEur    = "price_eur"
+        case priceEur    = "total_price_eur"
     }
 }
 
