@@ -1,0 +1,88 @@
+# EC2 docker-compose for staging — sits at /opt/app-staging/docker-compose.yml
+# Completely isolated from production: different project name, port, postgres volume, and network.
+# Never referenced by the main deploy workflow.
+
+name: cooking-staging
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cooking}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-cooking}
+    volumes:
+      - /data/postgres-staging:/var/lib/postgresql/data
+    networks:
+      - cooking_staging_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cooking} -d ${POSTGRES_DB:-cooking}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    image: ${IMAGE:?IMAGE is required}
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      VERSION: ${VERSION:-unknown}
+      ENVIRONMENT: ${ENVIRONMENT:-staging}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cooking}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cooking}
+      JWT_SECRET: ${JWT_SECRET:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AGENTCORE_MEMORY_ROLE_ARN: ${AGENTCORE_MEMORY_ROLE_ARN:-}
+      AWS_BEDROCK_MODEL_ID: ${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-5-20250929-v1:0}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROCERY_MCP_URL: ${GROCERY_MCP_URL:-http://grocery-mcp:8001/mcp}
+    ports:
+      - "4568:4567"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      grocery-mcp:
+        condition: service_healthy
+    networks:
+      - cooking_staging_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4567/healthz').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  grocery-mcp:
+    image: ${GROCERY_MCP_IMAGE:?GROCERY_MCP_IMAGE is required}
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      BUNQ_API_KEY: ${BUNQ_API_KEY:?BUNQ_API_KEY is required}
+      BUNQ_DATA_DIR: /data/bunq-staging
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_BEDROCK_MODEL_ID: ${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-5-20250929-v1:0}
+      PICNIC_AUTH_TOKEN: ${PICNIC_AUTH_TOKEN:-}
+      PICNIC_EMAIL: ${PICNIC_EMAIL:-}
+      PICNIC_PASSWORD: ${PICNIC_PASSWORD:-}
+    volumes:
+      - /data/bunq-staging:/data/bunq-staging
+    networks:
+      - cooking_staging_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  cooking_staging_net:
+    driver: bridge
