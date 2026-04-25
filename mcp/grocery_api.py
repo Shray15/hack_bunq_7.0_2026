@@ -18,10 +18,6 @@ STORE_CLIENTS = {
     "picnic": picnic_client,
 }
 
-# product_ids returned by clients' "no match" fallbacks — skip these so the
-# virtual cart doesn't fill up with placeholder items.
-_FALLBACK_IDS = {None, "pic_999"}
-
 # In-memory cart — one cart per store per session (keyed by store name for demo)
 _carts: dict[str, list[dict]] = {"ah": [], "picnic": []}
 
@@ -127,7 +123,7 @@ def _build_store_cart(ingredients: list[dict], store: str) -> list[dict]:
         )
         best = _pick_closest_pack(candidates, target_grams)
         pid = best.get("product_id")
-        if pid in _FALLBACK_IDS:
+        if not pid:
             continue
 
         qty = 1

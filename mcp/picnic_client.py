@@ -22,9 +22,6 @@ def _get_client() -> PicnicAPI:
     return _client
 
 
-_FALLBACK = {"product_id": "pic_999", "name": "Picnic product", "price_eur": 2.49, "unit": "1 stuk"}
-
-
 def search_product(query: str, max_results: int = 3) -> list[dict]:
     try:
         results = _get_client().search(query)
@@ -39,10 +36,10 @@ def search_product(query: str, max_results: int = 3) -> list[dict]:
                 "unit": it.get("unit_quantity", ""),
                 "image_url": it.get("image_id"),
             })
-        return products if products else [_FALLBACK]
+        return products
     except Exception as e:
         print(f"Picnic API error: {e}")
-        return [_FALLBACK]
+        return []
 
 
 def _strip_prefix(product_id: str) -> str:
