@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     agentcore_memory_role_arn: str = ""
 
     gemini_api_key: str = ""
-    gemini_image_model: str = "gemini-2.5-flash-image-preview"
+    gemini_image_model: str = "gemini-2.5-flash-image"
     bunq_api_key: str = ""
     bunq_installation_token: str = ""
 
