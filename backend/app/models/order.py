@@ -27,8 +27,12 @@ class Order(Base):
     )
     store: Mapped[str] = mapped_column(String(16), nullable=False)
     total_eur: Mapped[float] = mapped_column(Float, nullable=False)
+    payment_method: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="bunq_me"
+    )
     bunq_request_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     bunq_payment_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    bunq_payment_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="ready_to_pay")
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

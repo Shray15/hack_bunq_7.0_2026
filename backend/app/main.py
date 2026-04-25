@@ -15,7 +15,9 @@ from app.routers import (
     cart,
     chat,
     events,
+    meal_card,
     meal_plan,
+    meal_share,
     meals,
     orders,
     profile,
@@ -65,6 +67,8 @@ def create_app() -> FastAPI:
     app.include_router(orders.router)
     app.include_router(meals.router)
     app.include_router(meal_plan.router)
+    app.include_router(meal_card.router)
+    app.include_router(meal_share.router)
 
     return app
 

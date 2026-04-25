@@ -35,6 +35,14 @@
 		A0B1C2D3E4F506172839405A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C5 /* AppState.swift */; };
 		8A7B6C5D4E3F2A1B0C9D8E7F /* UserStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8E9D0C1B2A3F4E5D6C7B8A /* UserStore.swift */; };
 		9B8A7C6D5E4F3A2B1C0D9E8F /* OrderReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9D8C7B6A5F4E3D2C1B0A9F /* OrderReviewView.swift */; };
+		A1B2C3D4E5F60718293A4B01 /* MealCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B11 /* MealCard.swift */; };
+		A1B2C3D4E5F60718293A4B02 /* MealCardTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B12 /* MealCardTile.swift */; };
+		A1B2C3D4E5F60718293A4B03 /* MealCardScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B13 /* MealCardScreen.swift */; };
+		A1B2C3D4E5F60718293A4B04 /* MealCardSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B14 /* MealCardSetupView.swift */; };
+		A1B2C3D4E5F60718293A4B05 /* MealCardTransactionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B15 /* MealCardTransactionRow.swift */; };
+		A1B2C3D4E5F60718293A4C01 /* MealShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C11 /* MealShare.swift */; };
+		A1B2C3D4E5F60718293A4C02 /* PaymentMethodPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C12 /* PaymentMethodPicker.swift */; };
+		A1B2C3D4E5F60718293A4C03 /* ShareCostSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4C13 /* ShareCostSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -68,6 +76,14 @@
 		EE09F2EB08A930286FCF01AF /* Cart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cart.swift; sourceTree = "<group>"; };
 		EE94EFD0BE6F520EB8A84BE1 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		FE591B937C39FDFD9ADC42E3 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B11 /* MealCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCard.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B12 /* MealCardTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCardTile.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B13 /* MealCardScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCardScreen.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B14 /* MealCardSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCardSetupView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B15 /* MealCardTransactionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCardTransactionRow.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C11 /* MealShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealShare.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C12 /* PaymentMethodPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentMethodPicker.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4C13 /* ShareCostSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCostSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -89,8 +105,20 @@
 				60EE72ED317EDB0A39BE34BD /* Profile */,
 				8568FFF6753399B5A5C7D23A /* Recipe */,
 				4499007FE82AFEC5133F6CCB /* Tracker */,
+				A1B2C3D4E5F60718293A4B20 /* Wallet */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F60718293A4B20 /* Wallet */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60718293A4B12 /* MealCardTile.swift */,
+				A1B2C3D4E5F60718293A4B13 /* MealCardScreen.swift */,
+				A1B2C3D4E5F60718293A4B14 /* MealCardSetupView.swift */,
+				A1B2C3D4E5F60718293A4B15 /* MealCardTransactionRow.swift */,
+			);
+			path = Wallet;
 			sourceTree = "<group>";
 		};
 		6F70819203A4B5C6D7E8F9AB /* Auth */ = {
@@ -137,6 +165,8 @@
 			children = (
 				1BC15AC6BE6A501E3EDC8302 /* OrderCheckoutView.swift */,
 				0E9D8C7B6A5F4E3D2C1B0A9F /* OrderReviewView.swift */,
+				A1B2C3D4E5F60718293A4C12 /* PaymentMethodPicker.swift */,
+				A1B2C3D4E5F60718293A4C13 /* ShareCostSheet.swift */,
 				7081920304A5B6C7D8E9F0AB /* StoreComparisonView.swift */,
 			);
 			path = Order;
@@ -221,6 +251,8 @@
 			isa = PBXGroup;
 			children = (
 				EE09F2EB08A930286FCF01AF /* Cart.swift */,
+				A1B2C3D4E5F60718293A4B11 /* MealCard.swift */,
+				A1B2C3D4E5F60718293A4C11 /* MealShare.swift */,
 				D1E61EA7D8BF9EB1387AE2D1 /* Recipe.swift */,
 				C93321052CCDE95460388F94 /* UserProfile.swift */,
 			);
@@ -308,6 +340,14 @@
 				8A7B6C5D4E3F2A1B0C9D8E7F /* UserStore.swift in Sources */,
 				9DA4E0CD833E7B07DD2FB063 /* UserProfile.swift in Sources */,
 				B8F7C024815D2751212DFB4F /* VoiceButton.swift in Sources */,
+				A1B2C3D4E5F60718293A4B01 /* MealCard.swift in Sources */,
+				A1B2C3D4E5F60718293A4B02 /* MealCardTile.swift in Sources */,
+				A1B2C3D4E5F60718293A4B03 /* MealCardScreen.swift in Sources */,
+				A1B2C3D4E5F60718293A4B04 /* MealCardSetupView.swift in Sources */,
+				A1B2C3D4E5F60718293A4B05 /* MealCardTransactionRow.swift in Sources */,
+				A1B2C3D4E5F60718293A4C01 /* MealShare.swift in Sources */,
+				A1B2C3D4E5F60718293A4C02 /* PaymentMethodPicker.swift in Sources */,
+				A1B2C3D4E5F60718293A4C03 /* ShareCostSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

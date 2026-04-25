@@ -17,7 +17,12 @@ router = APIRouter(tags=["orders"])
 async def checkout(
     payload: CheckoutRequest, user_id: CurrentUserId, db: DbSession
 ) -> CheckoutResponse:
-    return await order_flow.checkout(db=db, user_id=user_id, cart_id=payload.cart_id)
+    return await order_flow.checkout(
+        db=db,
+        user_id=user_id,
+        cart_id=payload.cart_id,
+        payment_method=payload.payment_method,
+    )
 
 
 @router.get("/orders/{order_id}", response_model=Order)

@@ -268,37 +268,196 @@ class APIService {
 
     // MARK: - Checkout
 
-    /// `POST /order/checkout` — mints a bunq.me payment URL for the given cart.
-    /// In mock mode also schedules an `order_status: paid` SSE event a few seconds
-    /// later so the wait-for-paid overlay finishes the demo loop without a
-    /// backend.
-    func checkout(cartId: String) async throws -> CheckoutResponse {
+    /// `POST /order/checkout`. With `paymentMethod = .bunqMe` (default) this
+    /// mints a bunq.me URL and the backend's poller will fire the SSE
+    /// `order_status: paid` event when the user pays in bunq. With
+    /// `paymentMethod = .mealCard` the backend debits the user's monthly
+    /// meal-card sub-account synchronously and returns `status: "paid"` with
+    /// `paymentURL: nil` — no SSE wait needed.
+    ///
+    /// In mock mode we still schedule a fake paid event for the bunq.me path.
+    func checkout(
+        cartId: String,
+        paymentMethod: CheckoutPaymentMethod = .bunqMe
+    ) async throws -> CheckoutResponse {
         if useMockData {
             try await Task.sleep(nanoseconds: 500_000_000)
             let orderId = "order-\(UUID().uuidString.prefix(8))"
+            let isMealCard = paymentMethod == .mealCard
             let response = CheckoutResponse(
                 orderId: String(orderId),
-                paymentURL: MockData.checkoutResponse.paymentURL,
-                amountEur: MockData.checkoutResponse.amountEur
+                paymentURL: isMealCard ? nil : MockData.checkoutResponse.paymentURL,
+                amountEur: MockData.checkoutResponse.amountEur,
+                paymentMethod: paymentMethod.rawValue,
+                status: isMealCard ? "paid" : "ready_to_pay"
             )
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 4_000_000_000)
-                RealtimeService.shared.simulate(.orderStatus(OrderStatusEvent(
-                    orderId: response.orderId ?? String(orderId),
-                    status: "paid",
-                    paidAt: Date()
-                )))
+            if !isMealCard {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 4_000_000_000)
+                    RealtimeService.shared.simulate(.orderStatus(OrderStatusEvent(
+                        orderId: response.orderId ?? String(orderId),
+                        status: "paid",
+                        paidAt: Date()
+                    )))
+                }
             }
             return response
         }
 
         guard let url = URL(string: "\(baseURL)/order/checkout") else { throw APIError.invalidURL }
         var req = authedRequest(url: url, method: "POST")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["cart_id": cartId])
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "cart_id": cartId,
+            "payment_method": paymentMethod.rawValue,
+        ])
 
         let (data, response) = try await URLSession.shared.data(for: req)
         let validData = try await handle(data, response)
         do { return try decoder.decode(CheckoutResponse.self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    // MARK: - Meal card
+
+    /// `GET /meal-card/current`. Returns nil on a 404 (no card for the current
+    /// month yet) instead of throwing, so callers can render the setup CTA
+    /// without exception handling.
+    func getCurrentMealCard() async throws -> MealCard? {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return nil
+        }
+
+        guard let url = URL(string: "\(baseURL)/meal-card/current") else {
+            throw APIError.invalidURL
+        }
+        let req = authedRequest(url: url, method: "GET")
+        let (data, response) = try await URLSession.shared.data(for: req)
+        if let http = response as? HTTPURLResponse {
+            if http.statusCode == 404 { return nil }
+            if http.statusCode == 401 {
+                await AuthService.shared.handleUnauthorized()
+                throw APIError.unauthorized
+            }
+            if !(200...299).contains(http.statusCode) {
+                throw APIError.server(http.statusCode)
+            }
+        }
+        do { return try decoder.decode(MealCard.self, from: data) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    /// `POST /meal-card` — creates the current month's card with the given
+    /// budget, or returns the existing card if one already exists for this
+    /// month (idempotent).
+    func createMealCard(budgetEur: Double) async throws -> MealCard {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 700_000_000)
+            return MockData.makeMealCard(budgetEur: budgetEur, balanceEur: budgetEur)
+        }
+
+        guard let url = URL(string: "\(baseURL)/meal-card") else { throw APIError.invalidURL }
+        var req = authedRequest(url: url, method: "POST")
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "monthly_budget_eur": budgetEur,
+        ])
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(MealCard.self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    /// `POST /meal-card/topup` — adds funds to the current month's card.
+    func topUpMealCard(amountEur: Double) async throws -> MealCard {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 400_000_000)
+            return MockData.makeMealCard(budgetEur: 300, balanceEur: 200 + amountEur)
+        }
+
+        guard let url = URL(string: "\(baseURL)/meal-card/topup") else { throw APIError.invalidURL }
+        var req = authedRequest(url: url, method: "POST")
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "amount_eur": amountEur,
+        ])
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(MealCard.self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    /// `GET /meal-card/transactions?limit=...`.
+    func getMealCardTransactions(limit: Int = 50) async throws -> [MealCardTransaction] {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return []
+        }
+
+        guard let url = URL(string: "\(baseURL)/meal-card/transactions?limit=\(limit)") else {
+            throw APIError.invalidURL
+        }
+        let req = authedRequest(url: url, method: "GET")
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode([MealCardTransaction].self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    // MARK: - Share-cost (post-checkout bunq.me split link)
+
+    /// `POST /orders/{order_id}/share-cost`. Idempotent on the backend for
+    /// matching (order, participant_count, include_self).
+    func createShareCost(
+        orderId: String,
+        participantCount: Int,
+        includeSelf: Bool = true
+    ) async throws -> MealShare {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 600_000_000)
+            return MockData.makeShareCost(
+                orderId: orderId,
+                participantCount: participantCount,
+                includeSelf: includeSelf
+            )
+        }
+
+        guard let url = URL(string: "\(baseURL)/orders/\(orderId)/share-cost") else {
+            throw APIError.invalidURL
+        }
+        var req = authedRequest(url: url, method: "POST")
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "participant_count": participantCount,
+            "include_self": includeSelf,
+        ])
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(MealShare.self, from: validData) }
+        catch { throw APIError.decoding(error) }
+    }
+
+    /// `GET /orders/{order_id}/share-cost`. Returns nil on 404 (no share has
+    /// been generated for this order yet).
+    func getShareCost(orderId: String) async throws -> MealShare? {
+        if useMockData {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return nil
+        }
+
+        guard let url = URL(string: "\(baseURL)/orders/\(orderId)/share-cost") else {
+            throw APIError.invalidURL
+        }
+        let req = authedRequest(url: url, method: "GET")
+        let (data, response) = try await URLSession.shared.data(for: req)
+        if let http = response as? HTTPURLResponse {
+            if http.statusCode == 404 { return nil }
+            if http.statusCode == 401 {
+                await AuthService.shared.handleUnauthorized()
+                throw APIError.unauthorized
+            }
+            if !(200...299).contains(http.statusCode) {
+                throw APIError.server(http.statusCode)
+            }
+        }
+        do { return try decoder.decode(MealShare.self, from: data) }
         catch { throw APIError.decoding(error) }
     }
 }

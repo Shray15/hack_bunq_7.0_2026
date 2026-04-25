@@ -50,6 +50,13 @@ final class AppState: ObservableObject {
     @Published private(set) var hasFetchedBackendProfile: Bool = false
     private var profileSyncTask: Task<Void, Never>?
 
+    // MARK: - Meal card (bunq sandbox monthly grocery card)
+
+    /// Current month's meal card. nil if the user hasn't set one up yet,
+    /// or while the first GET is in flight. Refreshed via `refreshMealCard()`.
+    @Published var currentMealCard: MealCard?
+    @Published private(set) var mealCardLoading: Bool = false
+
     // MARK: - HealthKit-sourced state
 
     @Published var lastWorkoutEndedAt: Date?
@@ -175,6 +182,27 @@ final class AppState: ObservableObject {
             // and the next PATCH will resync.
         }
         hasFetchedBackendProfile = true
+    }
+
+    // MARK: - Meal card
+
+    /// Pull the current month's meal card from backend. nil = no card yet
+    /// (Home tile shows the setup CTA in that case).
+    func refreshMealCard() async {
+        mealCardLoading = true
+        defer { mealCardLoading = false }
+        do {
+            currentMealCard = try await APIService.shared.getCurrentMealCard()
+        } catch {
+            // Don't drop the cached card on transient errors — the tile keeps
+            // showing the previous balance until the next refresh succeeds.
+        }
+    }
+
+    /// Replace the in-memory card after a mutation (creation, top-up, charge).
+    /// Lets views update without waiting for a follow-up GET round-trip.
+    func setMealCard(_ card: MealCard?) {
+        currentMealCard = card
     }
 
     /// Apply the server's view of the profile to local state, mapping wire
