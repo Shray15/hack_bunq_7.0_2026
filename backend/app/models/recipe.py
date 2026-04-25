@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,7 +31,7 @@ class Recipe(Base):
     macros: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     validated_macros: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
-    image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
 
     source: Mapped[str] = mapped_column(String(16), nullable=False, default="chat")
