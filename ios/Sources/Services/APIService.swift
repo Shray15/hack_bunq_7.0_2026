@@ -103,10 +103,10 @@ class APIService {
     }
 
     // MARK: - Cart
-    func buildCart(from recipe: Recipe, people: Int) async throws -> CartResponse {
+    func buildCart(from recipe: Recipe, people: Int, store: String? = nil) async throws -> CartResponse {
         if useMockData {
-            try await Task.sleep(nanoseconds: 800_000_000)
-            return MockData.cartResponse
+            try await Task.sleep(nanoseconds: 600_000_000)
+            return MockData.cart(for: store)
         }
 
         guard let url = URL(string: "\(baseURL)/cart/from-recipe") else { throw APIError.invalidURL }
@@ -114,10 +114,12 @@ class APIService {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+        var body: [String: Any] = [
             "recipe_id": recipe.id,
             "people": people,
-        ])
+        ]
+        if let store { body["store"] = store }
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         let (data, _) = try await URLSession.shared.data(for: req)
         do { return try decoder.decode(CartResponse.self, from: data) }
