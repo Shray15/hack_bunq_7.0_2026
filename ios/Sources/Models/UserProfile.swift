@@ -119,7 +119,6 @@ struct UserProfile: Codable {
     var carbTargetG: Double      = 200
     var fatTargetG: Double       = 65
     var householdSize: Int       = 1
-    var bunqConnected: Bool      = false
     var bodyweightKg: Double     = 70
     var heightCm: Double         = 175
     var age: Int                 = 30

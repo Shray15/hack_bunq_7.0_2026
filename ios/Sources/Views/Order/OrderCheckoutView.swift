@@ -53,7 +53,6 @@ struct OrderCheckoutView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var vm = OrderViewModel()
     @State private var showError = false
-    @State private var showBunqConnect = false
     @State private var excludedItemIDs: Set<String> = []
     @Environment(\.dismiss) private var dismiss
 
@@ -101,9 +100,6 @@ struct OrderCheckoutView: View {
                 }
             } message: {
                 Text(vm.errorMsg ?? "")
-            }
-            .sheet(isPresented: $showBunqConnect) {
-                BunqConnectSheet(isConnected: $appState.bunqConnected)
             }
         }
     }
@@ -240,13 +236,9 @@ struct OrderCheckoutView: View {
                 }
 
                 HStack {
-                    AppTag(
-                        appState.bunqConnected ? "bunq connected" : "bunq required",
-                        color: appState.bunqConnected ? AppTheme.success : AppTheme.accent,
-                        icon: "creditcard.fill"
-                    )
+                    AppTag("Pay via bunq", color: AppTheme.success, icon: "creditcard.fill")
                     Spacer()
-                    Text(appState.bunqConnected ? "Ready to pay" : "Connect before paying")
+                    Text("bunq.me payment opens after checkout")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.secondaryText)
                 }
@@ -258,11 +250,7 @@ struct OrderCheckoutView: View {
 
     private func payButton(_ cart: CartResponse) -> some View {
         Button {
-            if appState.bunqConnected {
-                Task { await vm.checkout(cart: filteredCart(cart)) }
-            } else {
-                showBunqConnect = true
-            }
+            Task { await vm.checkout(cart: filteredCart(cart)) }
         } label: {
             Group {
                 if vm.isOrdering {
@@ -271,8 +259,6 @@ struct OrderCheckoutView: View {
                         .frame(maxWidth: .infinity)
                 } else if !hasIncludedItems(cart) {
                     Label("Add an item to checkout", systemImage: "cart.badge.minus")
-                } else if !appState.bunqConnected {
-                    Label("Connect bunq to pay", systemImage: "creditcard.fill")
                 } else {
                     Label(
                         "Pay €\(filteredTotal(cart), specifier: "%.2f") via bunq",
@@ -292,15 +278,12 @@ struct OrderCheckoutView: View {
     // MARK: - Helpers
 
     private func currentStore(_ cart: CartResponse) -> String {
-        cart.selectedStore ?? cart.items.first?.store ?? "ah"
+        cart.selectedStore ?? cart.comparison.first?.store ?? "ah"
     }
 
     private var checkoutSummaryText: String {
         let people = "\(servings) \(servings == 1 ? "person" : "people")"
-        if appState.bunqConnected {
-            return "Scaled for \(people). Confirm once and the order moves into your day."
-        }
-        return "Scaled for \(people). Connect bunq to finish checkout."
+        return "Scaled for \(people). Confirm once and the order moves into your day."
     }
 
     private func toggle(_ id: String) {
@@ -324,7 +307,7 @@ struct OrderCheckoutView: View {
     }
 
     private func filteredTotal(_ cart: CartResponse) -> Double {
-        filteredItems(cart).reduce(0) { $0 + $1.totalPriceEur }
+        filteredItems(cart).reduce(0) { $0 + $1.priceEur }
     }
 
     private func filteredCart(_ cart: CartResponse) -> CartResponse {
@@ -405,8 +388,8 @@ private struct StorePill: View {
                     if isCheapest {
                         badge("Cheapest", color: AppTheme.success)
                     }
-                    if !entry.missing.isEmpty {
-                        badge("\(entry.missing.count) missing", color: AppTheme.accent)
+                    if entry.missingCount > 0 {
+                        badge("\(entry.missingCount) missing", color: AppTheme.accent)
                     }
                     Spacer(minLength: 0)
                 }
@@ -481,7 +464,7 @@ private struct BasketRow: View {
                         .strikethrough(!isIncluded, color: AppTheme.secondaryText)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
-                    Text(item.ingredientName.capitalized)
+                    Text(item.ingredient.capitalized)
                         .font(.caption)
                         .foregroundStyle(AppTheme.secondaryText)
                         .multilineTextAlignment(.leading)
@@ -490,7 +473,7 @@ private struct BasketRow: View {
                 Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("€\(item.totalPriceEur, specifier: "%.2f")")
+                    Text("€\(item.priceEur, specifier: "%.2f")")
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.text)
                         .strikethrough(!isIncluded, color: AppTheme.secondaryText)
@@ -505,7 +488,7 @@ private struct BasketRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(item.productName), €\(item.totalPriceEur, specifier: "%.2f")")
+        .accessibilityLabel("\(item.productName), €\(item.priceEur, specifier: "%.2f")")
         .accessibilityHint(isIncluded ? "Tap to skip this item" : "Tap to add this item back")
         .accessibilityAddTraits(isIncluded ? [] : [.isSelected])
     }

@@ -17,7 +17,6 @@ final class AppState: ObservableObject {
     @Published var displayName: String = "Sai"
     @Published var dietType: DietType = .balanced
     @Published var householdSize: Int = 1
-    @Published var bunqConnected: Bool = false
 
     // MARK: - Body stats & goal (persisted)
 
@@ -119,7 +118,6 @@ final class AppState: ObservableObject {
             carbTargetG: Double(macros.carbs),
             fatTargetG: Double(macros.fat),
             householdSize: householdSize,
-            bunqConnected: bunqConnected,
             bodyweightKg: bodyweightKg,
             heightCm: heightCm,
             age: age,

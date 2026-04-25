@@ -8,8 +8,7 @@ enum MockData {
         Recipe(
             id: "recipe-1",
             name: "High-Protein Chicken Bowl",
-            calories: 540,
-            macros: .init(proteinG: 45, carbsG: 40, fatG: 18),
+            macros: .init(calories: 540, proteinG: 45, carbsG: 40, fatG: 18),
             ingredients: [
                 .init(name: "chicken breast",  qty: 200, unit: "g"),
                 .init(name: "brown rice",       qty: 80,  unit: "g"),
@@ -31,8 +30,7 @@ enum MockData {
         Recipe(
             id: "recipe-2",
             name: "Keto Salmon with Avocado",
-            calories: 480,
-            macros: .init(proteinG: 38, carbsG: 6, fatG: 34),
+            macros: .init(calories: 480, proteinG: 38, carbsG: 6, fatG: 34),
             ingredients: [
                 .init(name: "salmon fillet", qty: 180, unit: "g"),
                 .init(name: "avocado",        qty: 1,   unit: "whole"),
@@ -53,8 +51,7 @@ enum MockData {
         Recipe(
             id: "recipe-3",
             name: "Vegan Buddha Bowl",
-            calories: 420,
-            macros: .init(proteinG: 18, carbsG: 58, fatG: 14),
+            macros: .init(calories: 420, proteinG: 18, carbsG: 58, fatG: 14),
             ingredients: [
                 .init(name: "chickpeas",       qty: 200, unit: "g"),
                 .init(name: "quinoa",          qty: 80,  unit: "g"),
@@ -75,8 +72,7 @@ enum MockData {
         Recipe(
             id: "recipe-4",
             name: "Turkey Chili Meal Prep",
-            calories: 510,
-            macros: .init(proteinG: 48, carbsG: 46, fatG: 14),
+            macros: .init(calories: 510, proteinG: 48, carbsG: 46, fatG: 14),
             ingredients: [
                 .init(name: "lean turkey mince", qty: 200, unit: "g"),
                 .init(name: "kidney beans", qty: 120, unit: "g"),
@@ -97,8 +93,7 @@ enum MockData {
         Recipe(
             id: "recipe-5",
             name: "Greek Yogurt Power Oats",
-            calories: 430,
-            macros: .init(proteinG: 36, carbsG: 52, fatG: 9),
+            macros: .init(calories: 430, proteinG: 36, carbsG: 52, fatG: 9),
             ingredients: [
                 .init(name: "rolled oats", qty: 60, unit: "g"),
                 .init(name: "greek yogurt", qty: 200, unit: "g"),
@@ -118,8 +113,7 @@ enum MockData {
         Recipe(
             id: "recipe-6",
             name: "Tuna Whole-Grain Wrap",
-            calories: 390,
-            macros: .init(proteinG: 34, carbsG: 38, fatG: 11),
+            macros: .init(calories: 390, proteinG: 34, carbsG: 38, fatG: 11),
             ingredients: [
                 .init(name: "tuna in water", qty: 140, unit: "g"),
                 .init(name: "whole-grain wrap", qty: 1, unit: "whole"),
@@ -139,8 +133,7 @@ enum MockData {
         Recipe(
             id: "recipe-7",
             name: "Tofu Edamame Stir Fry",
-            calories: 460,
-            macros: .init(proteinG: 32, carbsG: 44, fatG: 18),
+            macros: .init(calories: 460, proteinG: 32, carbsG: 44, fatG: 18),
             ingredients: [
                 .init(name: "firm tofu", qty: 180, unit: "g"),
                 .init(name: "edamame", qty: 100, unit: "g"),
@@ -160,8 +153,7 @@ enum MockData {
         Recipe(
             id: "recipe-8",
             name: "Egg White Frittata Plate",
-            calories: 360,
-            macros: .init(proteinG: 34, carbsG: 24, fatG: 12),
+            macros: .init(calories: 360, proteinG: 34, carbsG: 24, fatG: 12),
             ingredients: [
                 .init(name: "egg whites", qty: 220, unit: "ml"),
                 .init(name: "whole egg", qty: 1, unit: "whole"),
@@ -180,139 +172,134 @@ enum MockData {
         ),
     ]
 
-    private static let comparison: [StoreComparison] = [
-        StoreComparison(store: "ah",     totalEur: 13.45, missing: [],          itemCount: 5),
-        StoreComparison(store: "picnic", totalEur: 14.55, missing: ["garlic"],  itemCount: 4),
-    ]
+    // MARK: - Cart fixtures (match new wire contracts)
 
-    static let ahCart = CartResponse(
-        id: "cart-mock-ah",
+    static let comparisonResponse = CartComparisonResponse(
+        cartId: "cart-mock-1",
         recipeId: "recipe-1",
-        status: "open",
+        comparison: [
+            StoreComparison(store: "ah",     totalEur: 13.45, itemCount: 5, missingCount: 0),
+            StoreComparison(store: "picnic", totalEur: 14.55, itemCount: 4, missingCount: 1),
+        ]
+    )
+
+    static let ahItemsResponse = CartItemsResponse(
+        cartId: "cart-mock-1",
         selectedStore: "ah",
-        comparison: comparison,
+        totalEur: 13.45,
         items: [
             CartItem(
-                id: "ah_001",
-                ingredientName: "chicken breast",
-                store: "ah",
                 productId: "ah-7421",
+                ingredient: "chicken breast",
                 productName: "AH Kipfilet 500 g",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=240"),
                 qty: 1,
-                unitPriceEur: 5.49,
-                totalPriceEur: 5.49,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=240")
+                unit: "500 g",
+                priceEur: 5.49
             ),
             CartItem(
-                id: "ah_002",
-                ingredientName: "brown rice",
-                store: "ah",
                 productId: "ah-3120",
+                ingredient: "brown rice",
                 productName: "AH Zilvervliesrijst 1 kg",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=240"),
                 qty: 1,
-                unitPriceEur: 1.89,
-                totalPriceEur: 1.89,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=240")
+                unit: "1 kg",
+                priceEur: 1.89
             ),
             CartItem(
-                id: "ah_003",
-                ingredientName: "broccoli",
-                store: "ah",
                 productId: "ah-5530",
+                ingredient: "broccoli",
                 productName: "AH Broccoli 400 g",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=240"),
                 qty: 1,
-                unitPriceEur: 1.29,
-                totalPriceEur: 1.29,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=240")
+                unit: "400 g",
+                priceEur: 1.29
             ),
             CartItem(
-                id: "ah_004",
-                ingredientName: "olive oil",
-                store: "ah",
                 productId: "ah-2210",
+                ingredient: "olive oil",
                 productName: "AH Extra Vierge Olijfolie 500 ml",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=240"),
                 qty: 1,
-                unitPriceEur: 3.99,
-                totalPriceEur: 3.99,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=240")
+                unit: "500 ml",
+                priceEur: 3.99
             ),
             CartItem(
-                id: "ah_005",
-                ingredientName: "garlic",
-                store: "ah",
                 productId: "ah-1180",
+                ingredient: "garlic",
                 productName: "AH Knoflook 3-pack",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1471194402529-8e0f5a675de6?w=240"),
                 qty: 1,
-                unitPriceEur: 0.79,
-                totalPriceEur: 0.79,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1471194402529-8e0f5a675de6?w=240")
+                unit: "3 pack",
+                priceEur: 0.79
             ),
         ]
     )
 
-    static let picnicCart = CartResponse(
-        id: "cart-mock-picnic",
-        recipeId: "recipe-1",
-        status: "open",
+    static let picnicItemsResponse = CartItemsResponse(
+        cartId: "cart-mock-1",
         selectedStore: "picnic",
-        comparison: comparison,
+        totalEur: 14.55,
         items: [
             CartItem(
-                id: "pc_001",
-                ingredientName: "chicken breast",
-                store: "picnic",
                 productId: "pc-44012",
+                ingredient: "chicken breast",
                 productName: "Picnic Kipfilet vers 500 g",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=240"),
                 qty: 1,
-                unitPriceEur: 5.99,
-                totalPriceEur: 5.99,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=240")
+                unit: "500 g",
+                priceEur: 5.99
             ),
             CartItem(
-                id: "pc_002",
-                ingredientName: "brown rice",
-                store: "picnic",
                 productId: "pc-22301",
+                ingredient: "brown rice",
                 productName: "Picnic Bruine rijst 1 kg",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=240"),
                 qty: 1,
-                unitPriceEur: 1.79,
-                totalPriceEur: 1.79,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=240")
+                unit: "1 kg",
+                priceEur: 1.79
             ),
             CartItem(
-                id: "pc_003",
-                ingredientName: "broccoli",
-                store: "picnic",
                 productId: "pc-55510",
+                ingredient: "broccoli",
                 productName: "Picnic Broccoli 500 g",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=240"),
                 qty: 1,
-                unitPriceEur: 1.49,
-                totalPriceEur: 1.49,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=240")
+                unit: "500 g",
+                priceEur: 1.49
             ),
             CartItem(
-                id: "pc_004",
-                ingredientName: "olive oil",
-                store: "picnic",
                 productId: "pc-22020",
+                ingredient: "olive oil",
                 productName: "Picnic Olijfolie extra vierge 500 ml",
+                imageURL: URL(string: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=240"),
                 qty: 1,
-                unitPriceEur: 4.29,
-                totalPriceEur: 4.29,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=240")
+                unit: "500 ml",
+                priceEur: 4.29
             ),
         ]
     )
 
-    static func cart(for store: String?) -> CartResponse {
+    static func itemsResponse(for store: String?) -> CartItemsResponse {
         switch store?.lowercased() {
-        case "picnic": return picnicCart
-        default:       return ahCart
+        case "picnic": return picnicItemsResponse
+        default:       return ahItemsResponse
         }
     }
 
+    /// Aggregate used by the current single-call OrderCheckoutView. Phase 4 will
+    /// retire this and have the view consume `CartComparisonResponse` and
+    /// `CartItemsResponse` directly.
+    static func cart(for store: String?) -> CartResponse {
+        CartResponse.merge(
+            comparison: comparisonResponse,
+            items: itemsResponse(for: store)
+        )
+    }
+
     static let checkoutResponse = CheckoutResponse(
-        paymentURL: "bunq://request/demo-payment-123",
+        orderId: "order-mock-1",
+        paymentURL: "https://bunq.me/HackBunqDemo/13.45/Groceries",
         amountEur: 13.45
     )
 }

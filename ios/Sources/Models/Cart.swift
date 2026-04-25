@@ -1,46 +1,95 @@
 import Foundation
 
+// MARK: - Wire shapes (match backend contracts)
+
+/// Cart item as returned by `POST /cart/{cart_id}/select-store`.
 struct CartItem: Identifiable, Codable, Hashable {
-    let id: String
-    let ingredientName: String
-    let store: String
+    /// Backend uses `product_id` as the catalogue ID; we expose it as the row id too.
     let productId: String
+    let ingredient: String
     let productName: String
-    let qty: Double
-    let unitPriceEur: Double
-    let totalPriceEur: Double
     let imageURL: URL?
+    let qty: Double
+    let unit: String?
+    let priceEur: Double
+
+    var id: String { productId }
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case ingredientName  = "ingredient_name"
-        case store
-        case productId       = "product_id"
-        case productName     = "product_name"
+        case productId   = "product_id"
+        case ingredient
+        case productName = "name"
+        case imageURL    = "image_url"
         case qty
-        case unitPriceEur    = "unit_price_eur"
-        case totalPriceEur   = "total_price_eur"
-        case imageURL        = "image_url"
+        case unit
+        case priceEur    = "price_eur"
     }
 }
 
+/// One row in the per-store comparison returned by `POST /cart/from-recipe`.
 struct StoreComparison: Identifiable, Codable, Hashable {
     let store: String
     let totalEur: Double
-    let missing: [String]
     let itemCount: Int
+    let missingCount: Int
 
     var id: String { store }
 
     enum CodingKeys: String, CodingKey {
         case store
-        case totalEur  = "total_eur"
-        case missing
-        case itemCount = "item_count"
+        case totalEur     = "total_eur"
+        case itemCount    = "item_count"
+        case missingCount = "missing_count"
     }
 }
 
-struct CartResponse: Codable {
+/// Response of `POST /cart/from-recipe` — totals only, no items yet.
+struct CartComparisonResponse: Codable, Hashable {
+    let cartId: String
+    let recipeId: String
+    let comparison: [StoreComparison]
+
+    enum CodingKeys: String, CodingKey {
+        case cartId    = "cart_id"
+        case recipeId  = "recipe_id"
+        case comparison
+    }
+}
+
+/// Response of `POST /cart/{cart_id}/select-store` — the items list.
+struct CartItemsResponse: Codable, Hashable {
+    let cartId: String
+    let selectedStore: String
+    let totalEur: Double
+    let items: [CartItem]
+
+    enum CodingKeys: String, CodingKey {
+        case cartId        = "cart_id"
+        case selectedStore = "selected_store"
+        case totalEur      = "total_eur"
+        case items
+    }
+}
+
+/// Response of `POST /order/checkout`.
+struct CheckoutResponse: Codable {
+    let orderId: String?
+    let paymentURL: String
+    let amountEur: Double
+
+    enum CodingKeys: String, CodingKey {
+        case orderId    = "order_id"
+        case paymentURL = "payment_url"
+        case amountEur  = "amount_eur"
+    }
+}
+
+// MARK: - iOS aggregate (used by OrderCheckoutView until phase 4 splits it)
+
+/// Local aggregate the order screen consumes today. The fitness flow still hits
+/// `buildCart` once and gets back this combined view; phase 4 will split this
+/// into `CartComparisonResponse` (one screen) + `CartItemsResponse` (next).
+struct CartResponse: Codable, Hashable {
     let id: String
     let recipeId: String?
     let status: String
@@ -48,38 +97,36 @@ struct CartResponse: Codable {
     let comparison: [StoreComparison]
     let items: [CartItem]
 
-    enum CodingKeys: String, CodingKey {
-        case id
-        case recipeId       = "recipe_id"
-        case status
-        case selectedStore  = "selected_store"
-        case comparison
-        case items
-    }
-}
-
-struct CheckoutResponse: Codable {
-    let paymentURL: String
-    let amountEur: Double
-
-    enum CodingKeys: String, CodingKey {
-        case paymentURL = "payment_url"
-        case amountEur  = "amount_eur"
+    var totalEur: Double {
+        items.reduce(0) { $0 + $1.priceEur }
     }
 }
 
 extension CartResponse {
-    var totalEur: Double {
-        items.reduce(0) { $0 + $1.totalPriceEur }
+    /// Build an aggregate from a comparison response and a chosen-store items response.
+    static func merge(
+        comparison: CartComparisonResponse,
+        items: CartItemsResponse,
+        status: String = "open"
+    ) -> CartResponse {
+        CartResponse(
+            id: items.cartId,
+            recipeId: comparison.recipeId,
+            status: status,
+            selectedStore: items.selectedStore,
+            comparison: comparison.comparison,
+            items: items.items
+        )
     }
 }
+
+// MARK: - Store catalog helpers
 
 enum StoreCatalog {
     static func displayName(for store: String) -> String {
         switch store.lowercased() {
         case "ah":     return "Albert Heijn"
         case "picnic": return "Picnic"
-        case "jumbo":  return "Jumbo"
         default:       return store.capitalized
         }
     }

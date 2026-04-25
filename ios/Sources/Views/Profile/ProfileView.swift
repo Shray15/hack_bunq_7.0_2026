@@ -3,7 +3,6 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var health: HealthKitService
-    @State private var showBunqConnect = false
     @State private var weightText: String = ""
     @State private var heightText: String = ""
     @FocusState private var focusedField: ProfileField?
@@ -25,7 +24,6 @@ struct ProfileView: View {
                         goalsCard
                         dietCard
                         healthCard
-                        paymentCard
                     }
                     .appScrollContentPadding()
                 }
@@ -50,9 +48,6 @@ struct ProfileView: View {
                             .fontWeight(.semibold)
                     }
                 }
-            }
-            .sheet(isPresented: $showBunqConnect) {
-                BunqConnectSheet(isConnected: $appState.bunqConnected)
             }
         }
     }
@@ -446,46 +441,6 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Payment
-
-    private var paymentCard: some View {
-        AppCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Payment")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(AppTheme.text)
-
-                if appState.bunqConnected {
-                    HStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(AppTheme.success)
-                            .frame(width: 34, height: 34)
-                            .background(AppTheme.success.opacity(0.12))
-                            .clipShape(Circle())
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("bunq linked")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(AppTheme.text)
-                            Text("Checkout opens a payment request directly.")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondaryText)
-                        }
-
-                        Spacer()
-                    }
-                } else {
-                    Button {
-                        showBunqConnect = true
-                    } label: {
-                        Label("Connect bunq account", systemImage: "creditcard.fill")
-                    }
-                    .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.success))
-                }
-            }
-        }
-    }
-
     // MARK: - Helpers
 
     private var initials: String {
@@ -721,64 +676,3 @@ private struct InlineStepper: View {
     }
 }
 
-// MARK: - Bunq connect sheet
-
-struct BunqConnectSheet: View {
-    @Binding var isConnected: Bool
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                AppBackground()
-
-                VStack(spacing: 20) {
-                    Spacer()
-
-                    Circle()
-                        .fill(AppTheme.success.opacity(0.14))
-                        .frame(width: 90, height: 90)
-                        .overlay {
-                            Image(systemName: "creditcard.fill")
-                                .font(.system(size: 30, weight: .bold))
-                                .foregroundStyle(AppTheme.success)
-                        }
-
-                    VStack(spacing: 10) {
-                        Text("Connect bunq")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.text)
-                        Text("Link a bunq account so checkout can open a payment request immediately after the cart is built.")
-                            .font(.subheadline)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .padding(.horizontal, 28)
-
-                    Spacer()
-
-                    VStack(spacing: 12) {
-                        Button {
-                            isConnected = true
-                            dismiss()
-                        } label: {
-                            Text("Connect with bunq")
-                        }
-                        .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.success))
-
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.secondaryText)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
-                }
-            }
-            .navigationTitle("Connect bunq")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}

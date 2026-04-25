@@ -3,7 +3,6 @@ import Foundation
 struct Recipe: Identifiable, Codable, Hashable {
     let id: String
     let name: String
-    let calories: Int
     let macros: Macros
     let ingredients: [Ingredient]
     let steps: [String]
@@ -11,22 +10,29 @@ struct Recipe: Identifiable, Codable, Hashable {
     let prepTimeMin: Int
 
     struct Macros: Codable, Hashable {
-        let proteinG: Double
-        let carbsG: Double
-        let fatG: Double
+        let calories: Int
+        let proteinG: Int
+        let carbsG: Int
+        let fatG: Int
 
         enum CodingKeys: String, CodingKey {
+            case calories
             case proteinG = "protein_g"
-            case carbsG = "carbs_g"
-            case fatG = "fat_g"
+            case carbsG   = "carbs_g"
+            case fatG     = "fat_g"
         }
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, calories, macros, ingredients, steps
-        case imageURL = "image_url"
+        case id, name, macros, ingredients, steps
+        case imageURL    = "image_url"
         case prepTimeMin = "prep_time_min"
     }
+}
+
+extension Recipe {
+    /// Convenience for legacy call sites — sourced from `macros.calories`.
+    var calories: Int { macros.calories }
 }
 
 struct Ingredient: Identifiable, Codable, Hashable {
