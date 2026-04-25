@@ -12,6 +12,9 @@ struct OrderCheckoutView: View {
 
     @State private var excludedItemIDs: Set<String> = []
     @State private var navigateToReview = false
+    @State private var isCommitting = false
+    @State private var commitErrorMsg: String?
+    @State private var showCommitError = false
 
     var body: some View {
         ZStack {
@@ -36,6 +39,11 @@ struct OrderCheckoutView: View {
                 store: cart.selectedStore,
                 onClose: onClose
             )
+        }
+        .alert("Couldn't update your cart", isPresented: $showCommitError) {
+            Button("OK") { commitErrorMsg = nil }
+        } message: {
+            Text(commitErrorMsg ?? "Try again in a moment.")
         }
     }
 
@@ -131,10 +139,14 @@ struct OrderCheckoutView: View {
 
     private var addToCartButton: some View {
         Button {
-            navigateToReview = true
+            Task { await commitAndAdvance() }
         } label: {
             Group {
-                if !hasIncludedItems {
+                if isCommitting {
+                    ProgressView()
+                        .tint(.white)
+                        .frame(maxWidth: .infinity)
+                } else if !hasIncludedItems {
                     Label("Add an item to checkout", systemImage: "cart.badge.minus")
                 } else {
                     Label("Add to cart (€\(filteredTotal, specifier: "%.2f"))", systemImage: "cart.fill")
@@ -146,7 +158,39 @@ struct OrderCheckoutView: View {
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(.ultraThinMaterial)
-        .disabled(!hasIncludedItems)
+        .disabled(!hasIncludedItems || isCommitting)
+    }
+
+    /// Push every item's `removed` state to the backend so the eventual
+    /// `/order/checkout` (and the Picnic cart commit it triggers) reflects
+    /// what the user actually selected. Sends one PATCH per cart item in
+    /// parallel; a single failure aborts and surfaces an alert.
+    private func commitAndAdvance() async {
+        guard hasIncludedItems else { return }
+        isCommitting = true
+        defer { isCommitting = false }
+
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                let api = APIService.shared
+                let cartId = cart.cartId
+                for item in cart.items {
+                    let removed = excludedItemIDs.contains(item.id)
+                    group.addTask {
+                        try await api.setItemRemoved(
+                            cartId: cartId,
+                            itemId: item.cartItemId,
+                            removed: removed
+                        )
+                    }
+                }
+                try await group.waitForAll()
+            }
+            navigateToReview = true
+        } catch {
+            commitErrorMsg = error.localizedDescription
+            showCommitError = true
+        }
     }
 
     // MARK: - Helpers

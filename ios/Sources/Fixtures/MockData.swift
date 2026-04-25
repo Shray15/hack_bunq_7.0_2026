@@ -231,6 +231,7 @@ enum MockData {
         totalEur: 13.45,
         items: [
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "ah-7421",
                 ingredient: "chicken breast",
                 productName: "AH Kipfilet 500 g",
@@ -240,6 +241,7 @@ enum MockData {
                 priceEur: 5.49
             ),
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "ah-3120",
                 ingredient: "brown rice",
                 productName: "AH Zilvervliesrijst 1 kg",
@@ -249,6 +251,7 @@ enum MockData {
                 priceEur: 1.89
             ),
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "ah-5530",
                 ingredient: "broccoli",
                 productName: "AH Broccoli 400 g",
@@ -258,6 +261,7 @@ enum MockData {
                 priceEur: 1.29
             ),
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "ah-2210",
                 ingredient: "olive oil",
                 productName: "AH Extra Vierge Olijfolie 500 ml",
@@ -267,6 +271,7 @@ enum MockData {
                 priceEur: 3.99
             ),
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "ah-1180",
                 ingredient: "garlic",
                 productName: "AH Knoflook 3-pack",
@@ -284,6 +289,7 @@ enum MockData {
         totalEur: 14.55,
         items: [
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "pc-44012",
                 ingredient: "chicken breast",
                 productName: "Picnic Kipfilet vers 500 g",
@@ -293,6 +299,7 @@ enum MockData {
                 priceEur: 5.99
             ),
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "pc-22301",
                 ingredient: "brown rice",
                 productName: "Picnic Bruine rijst 1 kg",
@@ -302,6 +309,7 @@ enum MockData {
                 priceEur: 1.79
             ),
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "pc-55510",
                 ingredient: "broccoli",
                 productName: "Picnic Broccoli 500 g",
@@ -311,6 +319,7 @@ enum MockData {
                 priceEur: 1.49
             ),
             CartItem(
+                cartItemId: UUID().uuidString,
                 productId: "pc-22020",
                 ingredient: "olive oil",
                 productName: "Picnic Olijfolie extra vierge 500 ml",

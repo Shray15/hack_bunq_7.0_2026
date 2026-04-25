@@ -4,7 +4,12 @@ import Foundation
 
 /// Cart item as returned by `POST /cart/{cart_id}/select-store`.
 struct CartItem: Identifiable, Codable, Hashable {
-    /// Backend uses `product_id` as the catalogue ID; we expose it as the row id too.
+    /// Backend cart-item UUID. Used as the path component on
+    /// `PATCH /cart/{cart_id}/items/{item_id}` and as the SwiftUI row identity
+    /// (so a product that exists in both the AH and Picnic carts still has
+    /// distinct rows).
+    let cartItemId: String
+    /// AH/Picnic catalogue product ID — opaque, used only for display debug.
     let productId: String
     let ingredient: String
     let productName: String
@@ -13,9 +18,10 @@ struct CartItem: Identifiable, Codable, Hashable {
     let unit: String?
     let priceEur: Double
 
-    var id: String { productId }
+    var id: String { cartItemId }
 
     enum CodingKeys: String, CodingKey {
+        case cartItemId  = "id"
         case productId   = "product_id"
         case ingredient  = "ingredient_name"
         case productName = "product_name"

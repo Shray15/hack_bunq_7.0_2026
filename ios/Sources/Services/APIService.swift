@@ -248,6 +248,24 @@ class APIService {
         catch { throw APIError.decoding(error) }
     }
 
+    /// `PATCH /cart/{cart_id}/items/{item_id}` — flip `removed_at` so the
+    /// backend's eventual checkout (and Picnic cart commit) reflects the user's
+    /// actual basket selection. `removed: true` skips the item; `false` puts it
+    /// back. Idempotent on the backend.
+    func setItemRemoved(cartId: String, itemId: String, removed: Bool) async throws {
+        if useMockData { return }
+
+        guard let url = URL(string: "\(baseURL)/cart/\(cartId)/items/\(itemId)") else {
+            throw APIError.invalidURL
+        }
+
+        var req = authedRequest(url: url, method: "PATCH")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["removed": removed])
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+        _ = try await handle(data, response)
+    }
+
     // MARK: - Checkout
 
     /// `POST /order/checkout` — mints a bunq.me payment URL for the given cart.
