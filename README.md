@@ -1,4 +1,4 @@
-# Cooking Companion
+# Bunq@Life
 
 > *Tell us what's happening. We handle the food.*
 
