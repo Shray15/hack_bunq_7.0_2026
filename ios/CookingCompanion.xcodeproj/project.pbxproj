@@ -33,6 +33,7 @@
 		F9ACCDCF5D9CD455E57A3F3B /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE94EFD0BE6F520EB8A84BE1 /* ProfileView.swift */; };
 		F9FAFA615AA8DBA825090516 /* AppDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E50920B7D4FE47627E0B26 /* AppDesign.swift */; };
 		A0B1C2D3E4F506172839405A /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F708192A3B4C5 /* AppState.swift */; };
+		8A7B6C5D4E3F2A1B0C9D8E7F /* UserStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8E9D0C1B2A3F4E5D6C7B8A /* UserStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +54,7 @@
 		4D5E6F70819203A4B5C6D7E8 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		5E6F70819203A4B5C6D7E8F9 /* AuthLandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthLandingView.swift; sourceTree = "<group>"; };
 		6F70819203A4B5C6D7E8F9AC /* RealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeService.swift; sourceTree = "<group>"; };
+		7F8E9D0C1B2A3F4E5D6C7B8A /* UserStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserStore.swift; sourceTree = "<group>"; };
 		AF1F4E7CA969A430D809FA0A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C93321052CCDE95460388F94 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		CCFB128D3799CA0D3B018436 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -123,6 +125,7 @@
 				3C4D5E6F70819203A4B5C6D7 /* KeychainStore.swift */,
 				4D5E6F70819203A4B5C6D7E8 /* AuthService.swift */,
 				6F70819203A4B5C6D7E8F9AC /* RealtimeService.swift */,
+				7F8E9D0C1B2A3F4E5D6C7B8A /* UserStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -298,6 +301,7 @@
 				D1E2F3A4B506172839405061 /* AuthService.swift in Sources */,
 				E2F3A4B506172839405061CC /* AuthLandingView.swift in Sources */,
 				F3A4B506172839405061CCDD /* RealtimeService.swift in Sources */,
+				8A7B6C5D4E3F2A1B0C9D8E7F /* UserStore.swift in Sources */,
 				9DA4E0CD833E7B07DD2FB063 /* UserProfile.swift in Sources */,
 				B8F7C024815D2751212DFB4F /* VoiceButton.swift in Sources */,
 			);
