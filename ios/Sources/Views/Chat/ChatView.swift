@@ -8,7 +8,9 @@ struct ChatView: View {
     @State private var hasRequestedSpeechPermission = false
     @State private var shouldSubmitRecordedTranscript = false
     @State private var recordingErrorMessage: String?
+    @State private var showClearConfirm = false
     @FocusState private var isInputFocused: Bool
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
@@ -17,19 +19,24 @@ struct ChatView: View {
                 messagesArea
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                composerPanel
+                composerArea
             }
-            .navigationTitle("Plan a meal")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(AppTheme.backgroundTop.opacity(0.96), for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Plan a meal")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(AppTheme.text)
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     if !vm.messages.isEmpty {
                         Button {
-                            vm.reset()
-                            inputText = ""
-                            recordingErrorMessage = nil
+                            showClearConfirm = true
                         } label: {
-                            Text("Clear")
+                            Text("New")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(AppTheme.primary)
                                 .padding(.horizontal, 12)
@@ -37,8 +44,23 @@ struct ChatView: View {
                                 .background(AppTheme.card.opacity(0.9))
                                 .clipShape(Capsule())
                         }
+                        .accessibilityLabel("Start a new plan")
                     }
                 }
+            }
+            .confirmationDialog(
+                "Start a new plan?",
+                isPresented: $showClearConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Clear conversation", role: .destructive) {
+                    vm.reset()
+                    inputText = ""
+                    recordingErrorMessage = nil
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes the current brief and recipe options.")
             }
             .sheet(item: $selectedRecipe) { recipe in
                 RecipeDetailView(recipe: recipe)
@@ -53,22 +75,19 @@ struct ChatView: View {
             shouldSubmitRecordedTranscript = false
             let transcript = speech.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !transcript.isEmpty else { return }
-            Task { await send(transcript) }
+            send(transcript)
         }
     }
+
+    // MARK: - Messages
 
     private var messagesArea: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
-                    if let latestCommittedTask, !vm.messages.isEmpty {
-                        ChatContextPill(text: latestCommittedTask)
-                    }
-
                     if vm.messages.isEmpty {
                         EmptyPromptView { prompt in
-                            inputText = prompt
-                            Task { await send(prompt) }
+                            send(prompt)
                         }
                         .padding(.top, 8)
                     }
@@ -95,6 +114,7 @@ struct ChatView: View {
                 .padding(.bottom, 28)
             }
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: vm.messages.count) {
                 if let last = vm.messages.last {
                     withAnimation(.easeOut(duration: 0.22)) {
@@ -127,211 +147,322 @@ struct ChatView: View {
         }
     }
 
-    private var composerPanel: some View {
-        VStack(spacing: 12) {
-            taskBar
-            voicePanel
-            textComposer
+    // MARK: - Composer
+
+    private var composerArea: some View {
+        VStack(spacing: 8) {
+            if shouldShowOptionsRail {
+                currentOptionsRail
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+            if hasContextStrip {
+                contextStrip
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+            composerBar
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
         .background(.ultraThinMaterial)
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(Color.white.opacity(0.28))
                 .frame(height: 1)
         }
-        .shadow(color: .black.opacity(0.08), radius: 18, y: -6)
+        .animation(.easeOut(duration: 0.18), value: contextStripKey)
+        .animation(.easeOut(duration: 0.22), value: shouldShowOptionsRail)
     }
 
-    private var taskBar: some View {
-        AppCard(padding: 16, background: AppTheme.card.opacity(0.94)) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    Label(taskBarTitle, systemImage: taskBarIcon)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(taskBarTint)
+    private var shouldShowOptionsRail: Bool {
+        guard !vm.suggestedRecipes.isEmpty else { return false }
+        if isInputFocused || speech.isRecording { return false }
+        guard let lastRecipeIdx = vm.messages.lastIndex(where: {
+            ($0.recipes?.isEmpty == false)
+        }) else { return false }
+        return lastRecipeIdx < vm.messages.count - 1
+    }
 
-                    Spacer()
-
-                    if !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Button("Clear draft") {
-                            inputText = ""
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.secondaryText)
-                    } else if let latestCommittedTask, !speech.isRecording {
-                        Button("Reuse") {
-                            inputText = latestCommittedTask
-                            isInputFocused = true
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.primary)
+    private var currentOptionsRail: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(vm.suggestedRecipes) { recipe in
+                    OptionChip(recipe: recipe) {
+                        selectedRecipe = recipe
                     }
                 }
-
-                Text(taskBarText)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.text)
-                    .lineSpacing(3)
-
-                Text(taskBarSupportText)
-                    .font(.caption)
-                    .foregroundStyle(recordingErrorMessage == nil ? AppTheme.secondaryText : .red)
             }
+            .padding(.horizontal, 4)
         }
+        .scrollClipDisabled()
     }
 
-    private var voicePanel: some View {
-        AppCard(padding: 18, background: AppTheme.mutedCard.opacity(0.92)) {
-            VStack(spacing: 14) {
-                VoiceButton(isRecording: speech.isRecording, size: 74) {
-                    handleVoiceTap()
-                }
-                .disabled(vm.isLoading || speechPermissionDenied)
-                .opacity(vm.isLoading || speechPermissionDenied ? 0.55 : 1)
-
-                VStack(spacing: 4) {
-                    Text(voicePanelTitle)
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.text)
-
-                    Text(voicePanelDetail)
-                        .font(.caption)
-                        .foregroundStyle(speechPermissionDenied ? .red : AppTheme.secondaryText)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(2)
-                }
-
-                HStack(spacing: 8) {
-                    AppTag("Voice", color: AppTheme.primary, icon: "waveform")
-                    AppTag("Hands free", color: AppTheme.accent, icon: "sparkles")
-                }
+    private var composerBar: some View {
+        ZStack {
+            if speech.isRecording {
+                recordingRow
+                    .transition(.opacity)
+            } else {
+                inputRow
+                    .transition(.opacity)
             }
-            .frame(maxWidth: .infinity)
         }
-    }
-
-    private var textComposer: some View {
-        HStack(alignment: .bottom, spacing: 12) {
-            TextField("Quick lunch, high-protein, under 600 calories", text: $inputText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(.subheadline)
-                .focused($isInputFocused)
-                .submitLabel(.send)
-                .lineLimit(1...3)
-                .onSubmit {
-                    guard canSend else { return }
-                    Task { await send(inputText) }
-                }
-
-            if !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button {
-                    inputText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.secondaryText.opacity(0.7))
-                }
-                .buttonStyle(.plain)
-            }
-
-            Button {
-                Task { await send(inputText) }
-            } label: {
-                Image(systemName: "arrow.up")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 46, height: 46)
-                    .background(canSend ? AppTheme.primary : AppTheme.primary.opacity(0.35))
-                    .clipShape(Circle())
-            }
-            .disabled(!canSend)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .frame(minHeight: 56)
         .background(AppTheme.card.opacity(0.96))
         .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(AppTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(composerBorderColor, lineWidth: composerBorderWidth)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 14, y: 4)
+        .animation(.easeInOut(duration: 0.22), value: speech.isRecording)
+        .animation(.easeOut(duration: 0.18), value: isInputFocused)
+        .animation(.easeOut(duration: 0.18), value: vm.isLoading)
     }
 
-    private var latestCommittedTask: String? {
-        vm.messages.last(where: { $0.role == .user })?.text
+    private var inputRow: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField(
+                "Tell us what's happening today",
+                text: $inputText,
+                axis: .vertical
+            )
+            .textFieldStyle(.plain)
+            .font(.subheadline)
+            .foregroundStyle(.black)
+            .focused($isInputFocused)
+            .submitLabel(.send)
+            .lineLimit(1...4)
+            .onSubmit {
+                guard canSend else { return }
+                send(inputText)
+            }
+            .padding(.leading, 18)
+            .padding(.trailing, 4)
+            .padding(.vertical, 12)
+
+            trailingButtonStack
+                .padding(.trailing, 6)
+                .padding(.bottom, 6)
+        }
+    }
+
+    private var recordingRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            HStack(spacing: 10) {
+                AudioWaveBars(tint: .red)
+                    .frame(width: 30)
+
+                Text(speech.transcript.isEmpty ? "Listening…" : speech.transcript)
+                    .font(.subheadline)
+                    .foregroundStyle(.black)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.leading, 18)
+            .padding(.vertical, 12)
+
+            VoiceButton(isRecording: true, size: 38) {
+                handleVoiceTap()
+            }
+            .accessibilityLabel("Stop recording and send")
+            .padding(.trailing, 6)
+            .padding(.vertical, 6)
+        }
+    }
+
+    @ViewBuilder
+    private var trailingButtonStack: some View {
+        HStack(spacing: 6) {
+            if vm.isLoading {
+                stopStreamingButton
+                    .transition(.scale.combined(with: .opacity))
+            } else if trimmedInput.isEmpty {
+                primaryMicButton
+                    .transition(.scale.combined(with: .opacity))
+            } else {
+                secondaryMicButton
+                    .transition(.scale.combined(with: .opacity))
+                sendButton
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.78), value: trailingStateKey)
+    }
+
+    private var trailingStateKey: String {
+        if vm.isLoading { return "loading" }
+        if trimmedInput.isEmpty { return "empty" }
+        return "typing"
+    }
+
+    private var primaryMicButton: some View {
+        Button {
+            handleVoiceTap()
+        } label: {
+            Image(systemName: "mic.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 38, height: 38)
+                .background(speechPermissionDenied ? AppTheme.secondaryText.opacity(0.6) : AppTheme.primary)
+                .clipShape(Circle())
+                .shadow(color: AppTheme.primary.opacity(speechPermissionDenied ? 0 : 0.28), radius: 8, y: 4)
+        }
+        .disabled(speechPermissionDenied)
+        .accessibilityLabel("Start voice brief")
+    }
+
+    private var secondaryMicButton: some View {
+        Button {
+            handleVoiceTap()
+        } label: {
+            Image(systemName: "mic.fill")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(speechPermissionDenied ? AppTheme.secondaryText : AppTheme.primary)
+                .frame(width: 32, height: 32)
+                .background((speechPermissionDenied ? AppTheme.secondaryText : AppTheme.primary).opacity(0.12))
+                .clipShape(Circle())
+        }
+        .disabled(speechPermissionDenied)
+        .accessibilityLabel("Switch to voice")
+    }
+
+    private var sendButton: some View {
+        Button {
+            send(inputText)
+        } label: {
+            Image(systemName: "arrow.up")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 38, height: 38)
+                .background(AppTheme.primary)
+                .clipShape(Circle())
+                .shadow(color: AppTheme.primary.opacity(0.32), radius: 8, y: 4)
+        }
+        .accessibilityLabel("Send")
+    }
+
+    private var stopStreamingButton: some View {
+        Button {
+            vm.cancel()
+        } label: {
+            Image(systemName: "stop.fill")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 38, height: 38)
+                .background(AppTheme.secondaryText)
+                .clipShape(Circle())
+        }
+        .accessibilityLabel("Stop response")
+    }
+
+    private var composerBorderColor: Color {
+        if speech.isRecording { return Color.red.opacity(0.55) }
+        if vm.isLoading        { return AppTheme.primary.opacity(0.45) }
+        if isInputFocused      { return AppTheme.primary.opacity(0.55) }
+        return AppTheme.stroke
+    }
+
+    private var composerBorderWidth: CGFloat {
+        speech.isRecording || vm.isLoading || isInputFocused ? 1.5 : 1
+    }
+
+    // MARK: - Context strip
+
+    private var contextStripKey: String {
+        if let recordingErrorMessage { return "err:\(recordingErrorMessage)" }
+        if speech.isRecording { return "rec" }
+        if speechPermissionDenied { return "denied" }
+        if vm.isLoading { return "loading" }
+        return ""
+    }
+
+    private var hasContextStrip: Bool {
+        !contextStripKey.isEmpty
+    }
+
+    @ViewBuilder
+    private var contextStrip: some View {
+        if let recordingErrorMessage {
+            stripView(
+                icon: "exclamationmark.triangle.fill",
+                tint: .red,
+                title: recordingErrorMessage,
+                action: nil
+            )
+        } else if speech.isRecording {
+            stripView(
+                icon: "waveform",
+                tint: .red,
+                title: speech.transcript.isEmpty ? "Listening… speak naturally." : "Listening…",
+                action: nil
+            )
+        } else if speechPermissionDenied {
+            stripView(
+                icon: "mic.slash.fill",
+                tint: .red,
+                title: "Voice is off. Typing still works.",
+                action: ("Settings", openAppSettings)
+            )
+        } else if vm.isLoading {
+            stripView(
+                icon: "sparkles",
+                tint: AppTheme.primary,
+                title: vm.streamingText.isEmpty ? "Planner is thinking…" : "Streaming response…",
+                action: nil
+            )
+        }
+    }
+
+    private func stripView(
+        icon: String,
+        tint: Color,
+        title: String,
+        action: (label: String, run: () -> Void)?
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(tint)
+
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.text)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+
+            if let action {
+                Button(action.label, action: action.run)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.primary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.10))
+        .clipShape(Capsule())
+    }
+
+    // MARK: - Helpers
+
+    private var trimmedInput: String {
+        inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSend: Bool {
+        !vm.isLoading && !trimmedInput.isEmpty
     }
 
     private var speechPermissionDenied: Bool {
         hasRequestedSpeechPermission && !speech.isAuthorized
     }
 
-    private var canSend: Bool {
-        !vm.isLoading && !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var taskBarTitle: String {
-        if speech.isRecording { return "Listening live" }
-        if !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Draft request" }
-        if latestCommittedTask != nil { return "Current brief" }
-        return "Task bar"
-    }
-
-    private var taskBarIcon: String {
-        if speech.isRecording { return "waveform" }
-        if !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "square.and.pencil" }
-        if latestCommittedTask != nil { return "sparkles.rectangle.stack" }
-        return "list.bullet.rectangle.portrait"
-    }
-
-    private var taskBarTint: Color {
-        if speech.isRecording { return .red }
-        if !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return AppTheme.accent }
-        return AppTheme.primary
-    }
-
-    private var taskBarText: String {
-        if speech.isRecording {
-            return speech.transcript.isEmpty
-                ? "Listening for who it is for, the timing, the mood, and the food goal."
-                : speech.transcript
+    private func openAppSettings() {
+        if let url = URL(string: "app-settings:") {
+            openURL(url)
         }
-
-        let draft = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !draft.isEmpty { return draft }
-        if let latestCommittedTask { return latestCommittedTask }
-        return "Describe the people, occasion, diet, and calorie target. We will turn that into recipe options."
-    }
-
-    private var taskBarSupportText: String {
-        if let recordingErrorMessage { return recordingErrorMessage }
-        if speech.isRecording { return "Stop the mic when the brief sounds right. The transcript sends automatically." }
-        if speechPermissionDenied { return "Speech recognition is off on this device. Typing still works." }
-        if !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Press send or hit return when the brief is ready."
-        }
-        return "Best results mention who it is for, the time available, and any diet or calorie constraints."
-    }
-
-    private var voicePanelTitle: String {
-        if speech.isRecording { return "Recording now" }
-        if speechPermissionDenied { return "Voice needs permission" }
-        if vm.isLoading { return "Planner is responding" }
-        return "Speak your meal brief"
-    }
-
-    private var voicePanelDetail: String {
-        if speech.isRecording {
-            return "Say it naturally. We will capture the brief and send it when you stop."
-        }
-        if speechPermissionDenied {
-            return "Enable Microphone and Speech Recognition in Settings to use the voice flow."
-        }
-        if vm.isLoading {
-            return "Hold on while the planner streams ideas back."
-        }
-        return "Great for longer requests like dinner for four tomorrow, something keto, or a date-night plan."
     }
 
     private func handleVoiceTap() {
@@ -356,15 +487,17 @@ struct ChatView: View {
         }
     }
 
-    private func send(_ text: String) async {
+    private func send(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         isInputFocused = false
         inputText = ""
         recordingErrorMessage = nil
-        await vm.send(trimmed)
+        vm.send(trimmed)
     }
 }
+
+// MARK: - Empty state
 
 struct EmptyPromptView: View {
     let onPromptSelected: (String) -> Void
@@ -372,7 +505,7 @@ struct EmptyPromptView: View {
     private let suggestions: [PromptSuggestion] = [
         .init(
             title: "High-protein reset",
-            detail: "Dinner under 600 calories",
+            detail: "Dinner under 600 cal",
             prompt: "High-protein dinner under 600 calories",
             icon: "bolt.fill",
             tint: AppTheme.primary
@@ -406,32 +539,16 @@ struct EmptyPromptView: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            AppCard {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        AppTag("Voice first", color: AppTheme.primary, icon: "waveform")
-                        Spacer()
-                        AppTag("Checkout ready", color: AppTheme.accent, icon: "cart.fill")
-                    }
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Tell us what's happening.")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(AppTheme.text)
 
-                    Text("Tell us what is happening. We handle the food.")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppTheme.text)
-
-                    Text("Describe the people, timing, dietary limits, and calorie goal. The planner answers with recipe choices that are ready for checkout.")
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.secondaryText)
-
-                    HStack(spacing: 12) {
-                        MetricChip(title: "Recipe options", value: "4 ideas", icon: "square.grid.2x2.fill", tint: AppTheme.primary)
-                        MetricChip(title: "Voice to order", value: "One flow", icon: "waveform.and.mic", tint: AppTheme.accent)
-                    }
-                }
+                Text("Speak or type a brief — people, timing, diet, calories. We turn it into recipes you can checkout.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
             }
-
-            AppSectionHeader("Start fast", detail: "Tap one or say the same thing out loud.")
 
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(suggestions) { suggestion in
@@ -459,15 +576,15 @@ private struct PromptSuggestionCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: suggestion.icon)
                     .font(.headline)
                     .foregroundStyle(suggestion.tint)
-                    .frame(width: 38, height: 38)
+                    .frame(width: 36, height: 36)
                     .background(suggestion.tint.opacity(0.12))
                     .clipShape(Circle())
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(suggestion.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.text)
@@ -478,16 +595,9 @@ private struct PromptSuggestionCard: View {
                 }
 
                 Spacer(minLength: 0)
-
-                HStack {
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(AppTheme.primary)
-                }
             }
-            .frame(maxWidth: .infinity, minHeight: 138, alignment: .topLeading)
-            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 118, alignment: .topLeading)
+            .padding(14)
             .background(AppTheme.card)
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -496,29 +606,11 @@ private struct PromptSuggestionCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(suggestion.title). \(suggestion.detail)")
     }
 }
 
-private struct ChatContextPill: View {
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "slider.horizontal.3")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(AppTheme.primary)
-
-            Text(text)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.primaryDeep)
-                .lineLimit(2)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(AppTheme.primary.opacity(0.14))
-        .clipShape(Capsule())
-    }
-}
+// MARK: - Bubble & helpers
 
 struct ChatBubbleView: View {
     let message: ChatMessage
@@ -647,5 +739,61 @@ struct TypingIndicator: View {
             Spacer()
         }
         .onAppear { animating = true }
+    }
+}
+
+struct AudioWaveBars: View {
+    let tint: Color
+    var bars: Int = 5
+    var minHeight: CGFloat = 5
+    var maxHeight: CGFloat = 22
+    var speed: Double = 5
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            HStack(alignment: .center, spacing: 3) {
+                ForEach(0..<bars, id: \.self) { i in
+                    let phase = t * speed + Double(i) * 0.65
+                    let normalized = (sin(phase) + 1) / 2
+                    let height = minHeight + (maxHeight - minHeight) * normalized
+                    Capsule()
+                        .fill(tint)
+                        .frame(width: 3, height: height)
+                }
+            }
+            .frame(height: maxHeight)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct OptionChip: View {
+    let recipe: Recipe
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(recipe.name)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.text)
+                    .lineLimit(1)
+                Text("· \(recipe.calories) kcal")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(AppTheme.card)
+            .overlay {
+                Capsule()
+                    .stroke(AppTheme.stroke, lineWidth: 1)
+            }
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(recipe.name), \(recipe.calories) calories")
     }
 }

@@ -25,42 +25,70 @@ class ChatViewModel: ObservableObject {
     @Published var isLoading:        Bool          = false
 
     private let api = APIService.shared
+    private var activeTask: Task<Void, Never>?
     var profile     = UserProfile()
 
-    func send(_ text: String) async {
+    func send(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
 
+        activeTask?.cancel()
         messages.append(.init(role: .user, text: trimmed))
         isLoading     = true
         streamingText = ""
 
-        // Stream the assistant text
+        activeTask = Task { [weak self] in
+            await self?.run(prompt: trimmed)
+        }
+    }
+
+    func cancel() {
+        activeTask?.cancel()
+        activeTask    = nil
+        streamingText = ""
+        isLoading     = false
+    }
+
+    func reset() {
+        cancel()
+        messages         = []
+        suggestedRecipes = []
+    }
+
+    private func run(prompt: String) async {
         var fullResponse = ""
         do {
-            for try await chunk in api.streamChat(prompt: trimmed, profile: profile) {
+            for try await chunk in api.streamChat(prompt: prompt, profile: profile) {
+                try Task.checkCancellation()
                 fullResponse  += chunk
                 streamingText  = fullResponse
             }
+        } catch is CancellationError {
+            streamingText = ""
+            isLoading     = false
+            return
         } catch {
             fullResponse = "Sorry, something went wrong. Please try again."
         }
         streamingText = ""
 
-        // Fetch recipe cards
+        if Task.isCancelled {
+            isLoading = false
+            return
+        }
+
         do {
-            let recipes = try await api.fetchRecipes(prompt: trimmed, profile: profile)
+            let recipes = try await api.fetchRecipes(prompt: prompt, profile: profile)
+            try Task.checkCancellation()
             suggestedRecipes = recipes
             messages.append(.init(role: .assistant, text: fullResponse, recipes: recipes))
+        } catch is CancellationError {
+            isLoading = false
+            return
         } catch {
             messages.append(.init(role: .assistant, text: fullResponse))
         }
-        isLoading = false
-    }
-
-    func reset() {
-        messages         = []
-        suggestedRecipes = []
-        streamingText    = ""
+        isLoading  = false
+        activeTask = nil
     }
 }
