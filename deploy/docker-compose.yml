@@ -46,7 +46,7 @@ services:
       postgres:
         condition: service_healthy
       grocery-mcp:
-        condition: service_started
+        condition: service_healthy
     networks:
       - cooking_net
     healthcheck:
