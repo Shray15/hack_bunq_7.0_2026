@@ -24,6 +24,8 @@ import asyncio
 import functools
 import json
 import logging
+import random
+from datetime import UTC, datetime
 from typing import Any
 
 import boto3
@@ -192,9 +194,14 @@ async def parse_transcript_to_constraints(
     if not is_configured():
         return _stub_nlu(transcript)
 
+    now = datetime.now(UTC)
+    variety_seed = random.randint(1, 9999)
     user_msg = (
         f"User profile:\n{_render_profile(profile)}\n\n"
         f"User said:\n\"\"\"{transcript}\"\"\"\n\n"
+        f"Context: {now.strftime('%A')} {now.strftime('%H:%M')} UTC, seed={variety_seed}. "
+        "Propose a creative, varied dish — avoid defaulting to grilled chicken or quinoa bowls unless "
+        "the user specifically asks for them. Pick something interesting that fits the request.\n\n"
         "Call emit_constraints with the user's normalised constraints and a "
         "proposed dish that fits both the request and the profile."
     )

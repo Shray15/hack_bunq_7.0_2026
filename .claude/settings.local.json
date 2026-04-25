@@ -25,7 +25,11 @@
       "Bash(docker stop *)",
       "Bash(docker rm *)",
       "Bash(grep \"\\\\.py$\")",
-      "Bash(grep \"\\\\.swift$\")"
+      "Bash(grep \"\\\\.swift$\")",
+      "Bash(grep -E \"\\\\.\\(py|json\\)$\")",
+      "Bash(awk '/def __call__|def listen/,/^    async def [a-z]/' backend/.venv/lib/python3.12/site-packages/sse_starlette/sse.py)",
+      "Bash(awk '/_stream_response/,/^    async def [a-z]/' backend/.venv/lib/python3.12/site-packages/sse_starlette/sse.py)",
+      "Bash(xcodebuild -project CookingCompanion.xcodeproj -scheme CookingCompanion -destination 'generic/platform=iOS Simulator' -quiet build)"
     ]
   }
 }

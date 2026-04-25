@@ -110,10 +110,17 @@ class ChatViewModel: ObservableObject {
     }
 
     private func handleImageReady(_ payload: ImageReadyEvent) {
+        // image_url is a (possibly multi-MB) data: URL on the wire. URL(string:)
+        // can return nil for very long strings — if it does, leave the existing
+        // (placeholder) imageURL in place rather than wiping it.
+        guard let url = payload.resolvedURL else {
+            print("[ChatVM] image_ready: URL(string:) returned nil for recipe \(payload.recipeId)")
+            return
+        }
         for messageIndex in messages.indices {
             guard var recipes = messages[messageIndex].recipes else { continue }
             guard let recipeIndex = recipes.firstIndex(where: { $0.id == payload.recipeId }) else { continue }
-            recipes[recipeIndex] = recipes[recipeIndex].replacing(imageURL: payload.imageURL)
+            recipes[recipeIndex] = recipes[recipeIndex].replacing(imageURL: url)
             messages[messageIndex].recipes = recipes
         }
     }

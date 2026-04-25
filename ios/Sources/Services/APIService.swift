@@ -199,7 +199,7 @@ class APIService {
                 try? await Task.sleep(nanoseconds: 1_400_000_000)
                 RealtimeService.shared.simulate(.imageReady(ImageReadyEvent(
                     recipeId: baseRecipe.id,
-                    imageURL: url
+                    imageURL: url.absoluteString
                 )))
             }
         }
