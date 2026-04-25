@@ -78,6 +78,9 @@ struct ChatView: View {
         .onChange(of: appState.planningPrefill) {
             submitPendingPlanningBrief()
         }
+        .onChange(of: vm.suggestedRecipes) {
+            appState.addRecipesToLibrary(vm.suggestedRecipes)
+        }
         .onChange(of: speech.isRecording, initial: false) { wasRecording, isRecording in
             guard wasRecording, !isRecording, shouldSubmitRecordedTranscript else { return }
             shouldSubmitRecordedTranscript = false
@@ -477,31 +480,31 @@ struct EmptyPromptView: View {
 
     private let suggestions: [PromptSuggestion] = [
         .init(
-            title: "High-protein reset",
-            detail: "Dinner under 600 cal",
-            prompt: "High-protein dinner under 600 calories",
+            title: "Post-workout",
+            detail: "35g+ protein",
+            prompt: "Post-workout meal with at least 35 grams of protein",
             icon: "bolt.fill",
             tint: AppTheme.primary
         ),
         .init(
-            title: "Keto lunch",
-            detail: "Fast and solo",
-            prompt: "Quick keto lunch for one",
-            icon: "leaf.fill",
+            title: "Cut-friendly",
+            detail: "Dinner under 550 kcal",
+            prompt: "Cut-friendly dinner under 550 calories with vegetables",
+            icon: "flame.fill",
             tint: AppTheme.accent
         ),
         .init(
-            title: "Family dinner",
-            detail: "Chicken for four",
-            prompt: "Dinner for four with chicken",
-            icon: "person.3.fill",
+            title: "Meal prep",
+            detail: "3 training lunches",
+            prompt: "Three high-protein lunch prep recipes for training days",
+            icon: "calendar",
             tint: AppTheme.primaryDeep
         ),
         .init(
-            title: "Date night",
-            detail: "Something impressive",
-            prompt: "Something impressive for Saturday night",
-            icon: "sparkles",
+            title: "Vegetarian protein",
+            detail: "High-fiber dinner",
+            prompt: "Vegetarian high-protein dinner with beans or tofu",
+            icon: "leaf.fill",
             tint: AppTheme.accent
         )
     ]
@@ -518,7 +521,7 @@ struct EmptyPromptView: View {
                     .font(.title2.weight(.bold))
                     .foregroundStyle(AppTheme.text)
 
-                Text("Speak or type a brief — people, timing, diet, calories. We turn it into recipes you can checkout.")
+                Text("Speak or type people, timing, diet, calories, and training goal. We turn it into recipes you can checkout.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
             }

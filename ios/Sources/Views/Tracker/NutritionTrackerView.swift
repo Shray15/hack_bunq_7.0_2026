@@ -2,7 +2,9 @@ import SwiftUI
 
 struct NutritionTrackerView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var health: HealthKitService
     @State private var showLogMeal = false
+    @State private var showLogWeight = false
 
     private var macros: [MacroMetric] {
         let targets = appState.macroTargets
@@ -47,7 +49,9 @@ struct NutritionTrackerView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         header
                         calorieDashboard
+                        waterCard
                         macroCard
+                        bodyweightCard
                         weeklyCard
                         mealLogCard
                     }
@@ -67,7 +71,169 @@ struct NutritionTrackerView: View {
                     )
                 }
             }
+            .sheet(isPresented: $showLogWeight) {
+                LogWeightSheet(initialWeight: appState.bodyweightKg) { kg in
+                    appState.logWeight(kg)
+                }
+                .presentationDetents([.fraction(0.42), .medium])
+            }
         }
+    }
+
+    // MARK: - Water
+
+    private var waterCard: some View {
+        let total = appState.waterTodayMl
+        let target = appState.waterTargetMl
+        let glassMl = max(target / 8, 200)
+        let filledGlasses = min(total / glassMl, 8)
+
+        return AppCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Hydration")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(AppTheme.text)
+                        Text("\(total) / \(target) ml today")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .monospacedDigit()
+                    }
+                    Spacer()
+                    Button {
+                        appState.resetWaterToday()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .frame(width: 30, height: 30)
+                            .background(AppTheme.mutedCard)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Reset today's water")
+                }
+
+                HStack(spacing: 8) {
+                    ForEach(0..<8, id: \.self) { idx in
+                        Button {
+                            if idx < filledGlasses {
+                                // Tapping a filled glass below the current count empties it.
+                                let target = (idx) * glassMl
+                                appState.addWater(ml: target - total)
+                            } else {
+                                appState.addWater(ml: glassMl)
+                            }
+                        } label: {
+                            Image(systemName: idx < filledGlasses ? "drop.fill" : "drop")
+                                .font(.title3)
+                                .foregroundStyle(idx < filledGlasses ? Color.blue : AppTheme.secondaryText.opacity(0.5))
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                                .background(idx < filledGlasses ? Color.blue.opacity(0.10) : AppTheme.mutedCard.opacity(0.6))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Glass \(idx + 1)")
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Bodyweight
+
+    private var bodyweightCard: some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Body weight")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(AppTheme.text)
+                        if let latest = appState.latestWeightEntry {
+                            HStack(spacing: 6) {
+                                Text("\(formatKg(latest.weightKg)) kg")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(AppTheme.text)
+                                    .monospacedDigit()
+                                if let delta = appState.weightDelta7d, abs(delta) >= 0.05 {
+                                    deltaPill(delta: delta)
+                                }
+                            }
+                        } else {
+                            Text("No log yet")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                    }
+                    Spacer()
+                    Button {
+                        showLogWeight = true
+                    } label: {
+                        Label("Log", systemImage: "plus")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(AppTheme.primary)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Log weight")
+                }
+
+                WeightTrendChart(entries: appState.recentWeightLog)
+                    .frame(height: 80)
+
+                HStack {
+                    Text("Goal: \(appState.goal.label) · Target \(formatKcal(appState.dailyCalorieTarget)) kcal")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.secondaryText)
+                    Spacer()
+                    if appState.recentWeightLog.count >= 2 {
+                        Text("\(appState.recentWeightLog.count) day window")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                }
+            }
+        }
+    }
+
+    private func deltaPill(delta: Double) -> some View {
+        let goalAlignsWithDelta: Bool
+        switch appState.goal {
+        case .cut:      goalAlignsWithDelta = delta < 0
+        case .bulk:     goalAlignsWithDelta = delta > 0
+        case .maintain: goalAlignsWithDelta = abs(delta) < 0.4
+        }
+        let color: Color = goalAlignsWithDelta ? AppTheme.success : AppTheme.accent
+        let symbol = delta >= 0 ? "arrow.up" : "arrow.down"
+        return HStack(spacing: 4) {
+            Image(systemName: symbol)
+                .font(.caption2.weight(.bold))
+            Text(String(format: "%.1f kg / 7d", abs(delta)))
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    private func formatKg(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(Int(value))
+            : String(format: "%.1f", value)
+    }
+
+    private func formatKcal(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
     private var header: some View {
@@ -641,6 +807,157 @@ private struct LogMealSheet: View {
                     .disabled(!canSave)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Weight trend chart
+
+private struct WeightTrendChart: View {
+    let entries: [WeightEntry]
+
+    private var minWeight: Double {
+        entries.map(\.weightKg).min() ?? 0
+    }
+
+    private var maxWeight: Double {
+        entries.map(\.weightKg).max() ?? 1
+    }
+
+    private var range: Double {
+        max(maxWeight - minWeight, 0.5)
+    }
+
+    var body: some View {
+        if entries.count < 2 {
+            placeholder
+        } else {
+            GeometryReader { geo in
+                let height = geo.size.height
+                let width = geo.size.width
+                let stepX = width / CGFloat(max(entries.count - 1, 1))
+
+                ZStack(alignment: .topLeading) {
+                    Path { path in
+                        for (index, entry) in entries.enumerated() {
+                            let x = CGFloat(index) * stepX
+                            let y = yPos(for: entry.weightKg, in: height)
+                            if index == 0 {
+                                path.move(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
+                    }
+                    .stroke(AppTheme.primary, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+
+                    Path { path in
+                        for (index, entry) in entries.enumerated() {
+                            let x = CGFloat(index) * stepX
+                            let y = yPos(for: entry.weightKg, in: height)
+                            if index == 0 {
+                                path.move(to: CGPoint(x: x, y: y))
+                            } else {
+                                path.addLine(to: CGPoint(x: x, y: y))
+                            }
+                        }
+                        path.addLine(to: CGPoint(x: width, y: height))
+                        path.addLine(to: CGPoint(x: 0, y: height))
+                        path.closeSubpath()
+                    }
+                    .fill(
+                        LinearGradient(
+                            colors: [AppTheme.primary.opacity(0.25), AppTheme.primary.opacity(0.0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                    if let last = entries.last {
+                        let lastX = CGFloat(entries.count - 1) * stepX
+                        let lastY = yPos(for: last.weightKg, in: height)
+                        Circle()
+                            .fill(AppTheme.primary)
+                            .frame(width: 8, height: 8)
+                            .position(x: lastX, y: lastY)
+                    }
+                }
+            }
+        }
+    }
+
+    private func yPos(for weight: Double, in height: CGFloat) -> CGFloat {
+        let normalized = (weight - minWeight) / range
+        let inverted = 1 - normalized
+        return CGFloat(inverted) * (height - 8) + 4
+    }
+
+    private var placeholder: some View {
+        HStack {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .foregroundStyle(AppTheme.primary.opacity(0.6))
+            Text("Log a few days to see your trend")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.secondaryText)
+            Spacer()
+        }
+        .padding(.horizontal, 4)
+    }
+}
+
+// MARK: - Log weight sheet
+
+private struct LogWeightSheet: View {
+    let initialWeight: Double
+    var onSave: (Double) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var weight: Double
+
+    init(initialWeight: Double, onSave: @escaping (Double) -> Void) {
+        self.initialWeight = initialWeight
+        self.onSave = onSave
+        _weight = State(initialValue: initialWeight)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+
+                VStack(spacing: 22) {
+                    Spacer(minLength: 20)
+
+                    Text("Log today's weight")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(AppTheme.text)
+
+                    Text(String(format: "%.1f kg", weight))
+                        .font(.system(size: 56, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppTheme.primaryDeep)
+                        .monospacedDigit()
+
+                    Slider(value: $weight, in: 35...200, step: 0.1)
+                        .tint(AppTheme.primary)
+                        .padding(.horizontal, 20)
+
+                    HStack(spacing: 12) {
+                        Button("Cancel") { dismiss() }
+                            .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.secondaryText.opacity(0.4)))
+
+                        Button("Save") {
+                            onSave(weight)
+                            dismiss()
+                        }
+                        .buttonStyle(AppPrimaryButtonStyle())
+                    }
+                    .padding(.horizontal, 20)
+
+                    Spacer(minLength: 10)
+                }
+            }
+            .navigationTitle("Weight log")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

@@ -2,8 +2,15 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var health: HealthKitService
     @State private var showBunqConnect = false
-    @FocusState private var nameFieldFocused: Bool
+    @State private var weightText: String = ""
+    @State private var heightText: String = ""
+    @FocusState private var focusedField: ProfileField?
+
+    enum ProfileField: Hashable {
+        case name, weight, height
+    }
 
     var body: some View {
         NavigationStack {
@@ -13,13 +20,37 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         identityCard
+                        targetsCard
+                        bodyStatsCard
                         goalsCard
+                        dietCard
+                        healthCard
                         paymentCard
                     }
                     .appScrollContentPadding()
                 }
             }
             .navigationTitle("Profile")
+            .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                weightText = formatKg(appState.bodyweightKg)
+                heightText = formatCm(appState.heightCm)
+            }
+            .onChange(of: focusedField) { _, newValue in
+                if newValue == nil {
+                    commitWeightTextIfNeeded()
+                    commitHeightTextIfNeeded()
+                }
+            }
+            .toolbar {
+                if focusedField != nil {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") { focusedField = nil }
+                            .fontWeight(.semibold)
+                    }
+                }
+            }
             .sheet(isPresented: $showBunqConnect) {
                 BunqConnectSheet(isConnected: $appState.bunqConnected)
             }
@@ -53,10 +84,10 @@ struct ProfileView: View {
                         .foregroundStyle(AppTheme.text)
                         .textInputAutocapitalization(.words)
                         .submitLabel(.done)
-                        .focused($nameFieldFocused)
-                        .onSubmit { nameFieldFocused = false }
+                        .focused($focusedField, equals: .name)
+                        .onSubmit { focusedField = nil }
 
-                    Text(dietSubtitle)
+                    Text(profileSubtitle)
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.secondaryText)
                         .lineLimit(1)
@@ -67,18 +98,137 @@ struct ProfileView: View {
         }
     }
 
-    private var initials: String {
-        let parts = appState.displayName
-            .split(separator: " ")
-            .prefix(2)
-            .map { String($0.prefix(1)).uppercased() }
-        return parts.isEmpty ? "?" : parts.joined()
+    // MARK: - Targets summary
+
+    private var targetsCard: some View {
+        AppCard(background: AppTheme.primary.opacity(0.08)) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Daily target")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.primary)
+                            .textCase(.uppercase)
+                        Text("\(formatKcal(appState.dailyCalorieTarget)) kcal")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppTheme.text)
+                            .monospacedDigit()
+                    }
+                    Spacer()
+                    Image(systemName: appState.goal.icon)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(AppTheme.primary)
+                        .clipShape(Circle())
+                }
+
+                let macros = appState.macroTargets
+                HStack(spacing: 10) {
+                    MacroChip(label: "Protein", value: "\(macros.protein)g", color: .blue)
+                    MacroChip(label: "Carbs",   value: "\(macros.carbs)g",   color: AppTheme.primary)
+                    MacroChip(label: "Fat",     value: "\(macros.fat)g",     color: .purple)
+                }
+
+                Text("BMR \(formatKcal(appState.bmr)) · TDEE \(formatKcal(appState.tdee)) · \(appState.goal.label) phase")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
     }
 
-    private var dietSubtitle: String {
-        let calories = "\(appState.dailyCalorieTarget) kcal/day"
-        let people = appState.householdSize == 1 ? "solo" : "\(appState.householdSize) people"
-        return "\(appState.dietType.rawValue) · \(calories) · \(people)"
+    // MARK: - Body stats
+
+    private var bodyStatsCard: some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Body stats")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.text)
+
+                HStack(spacing: 10) {
+                    statField(
+                        icon: "scalemass.fill",
+                        tint: AppTheme.accent,
+                        title: "Weight",
+                        unit: "kg",
+                        text: $weightText,
+                        field: .weight
+                    )
+                    statField(
+                        icon: "ruler.fill",
+                        tint: .blue,
+                        title: "Height",
+                        unit: "cm",
+                        text: $heightText,
+                        field: .height
+                    )
+                }
+
+                HStack(spacing: 12) {
+                    AppIconValueRow(
+                        icon: "calendar",
+                        tint: AppTheme.primary,
+                        title: "Age",
+                        value: "\(appState.age)"
+                    )
+                    InlineStepper(
+                        value: $appState.age,
+                        range: 14...90,
+                        step: 1
+                    )
+                }
+
+                segmentedRow(
+                    title: "Biological sex",
+                    selection: Binding(
+                        get: { appState.biologicalSex },
+                        set: { appState.biologicalSex = $0 }
+                    ),
+                    options: BiologicalSex.allCases,
+                    label: { $0.label }
+                )
+            }
+        }
+    }
+
+    private func statField(
+        icon: String,
+        tint: Color,
+        title: String,
+        unit: String,
+        text: Binding<String>,
+        field: ProfileField
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(tint)
+                    .frame(width: 26, height: 26)
+                    .background(tint.opacity(0.12))
+                    .clipShape(Circle())
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                TextField("0", text: text)
+                    .keyboardType(.decimalPad)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.text)
+                    .focused($focusedField, equals: field)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(unit)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
+        .padding(12)
+        .background(AppTheme.mutedCard.opacity(0.7))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Goals
@@ -86,29 +236,83 @@ struct ProfileView: View {
     private var goalsCard: some View {
         AppCard {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Goals")
+                Text("Training goal")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.text)
+
+                VStack(spacing: 10) {
+                    ForEach(NutritionGoal.allCases) { goal in
+                        GoalRow(
+                            goal: goal,
+                            isSelected: goal == appState.goal
+                        ) {
+                            appState.goal = goal
+                        }
+                    }
+                }
+
+                Divider()
+
+                HStack(spacing: 12) {
+                    Image(systemName: "figure.run")
+                        .foregroundStyle(AppTheme.accent)
+                        .frame(width: 34, height: 34)
+                        .background(AppTheme.accent.opacity(0.12))
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Activity level")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+                        Text(appState.activityLevel.label)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.text)
+                    }
+
+                    Spacer()
+
+                    Menu {
+                        ForEach(ActivityLevel.allCases) { level in
+                            Button {
+                                appState.activityLevel = level
+                            } label: {
+                                if level == appState.activityLevel {
+                                    Label(level.label, systemImage: "checkmark")
+                                } else {
+                                    Text(level.label)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("Change")
+                                .font(.caption.weight(.semibold))
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2.weight(.semibold))
+                        }
+                        .foregroundStyle(AppTheme.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(AppTheme.primary.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                    .accessibilityLabel("Change activity level")
+                }
+            }
+        }
+    }
+
+    // MARK: - Diet & household
+
+    private var dietCard: some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Preferences")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(AppTheme.text)
 
                 dietRow
                 Divider()
-
-                HStack(spacing: 12) {
-                    AppIconValueRow(
-                        icon: "flame.fill",
-                        tint: AppTheme.accent,
-                        title: "Daily calorie target",
-                        value: "\(appState.dailyCalorieTarget) kcal"
-                    )
-                    InlineStepper(
-                        value: $appState.dailyCalorieTarget,
-                        range: 1200...4000,
-                        step: 50
-                    )
-                }
-
-                Divider()
-
                 HStack(spacing: 12) {
                     AppIconValueRow(
                         icon: "person.2.fill",
@@ -174,6 +378,74 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Apple Health
+
+    @ViewBuilder
+    private var healthCard: some View {
+        if health.isAvailable {
+            AppCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text("Apple Health")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(AppTheme.text)
+                        Spacer()
+                        if health.isAuthorized {
+                            AppTag("Connected", color: AppTheme.success, icon: "checkmark.seal.fill")
+                        }
+                    }
+
+                    if health.isAuthorized {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HKStat(
+                                icon: "scalemass.fill",
+                                tint: AppTheme.accent,
+                                title: "Latest weight",
+                                value: health.latestWeightKg.map { "\(formatKg($0)) kg" } ?? "—"
+                            )
+                            HKStat(
+                                icon: "flame.fill",
+                                tint: AppTheme.primary,
+                                title: "Active energy today",
+                                value: "\(health.todayActiveEnergyKcal) kcal"
+                            )
+                            HKStat(
+                                icon: "figure.strengthtraining.traditional",
+                                tint: .blue,
+                                title: "Last workout",
+                                value: health.lastWorkoutEndedAt.map { lastWorkoutLabel(for: $0) } ?? "—"
+                            )
+                        }
+
+                        Button {
+                            Task { await health.refresh() }
+                        } label: {
+                            Label("Refresh", systemImage: "arrow.clockwise")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppTheme.primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(AppTheme.primary.opacity(0.10))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Text("Connect Apple Health to auto-fill weight, sync workouts, and write meal calories back.")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+
+                        Button {
+                            Task { await health.requestAuthorization() }
+                        } label: {
+                            Label("Connect Apple Health", systemImage: "heart.fill")
+                        }
+                        .buttonStyle(AppPrimaryButtonStyle(color: .pink))
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Payment
 
     private var paymentCard: some View {
@@ -214,6 +486,197 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Helpers
+
+    private var initials: String {
+        let parts = appState.displayName
+            .split(separator: " ")
+            .prefix(2)
+            .map { String($0.prefix(1)).uppercased() }
+        return parts.isEmpty ? "?" : parts.joined()
+    }
+
+    private var profileSubtitle: String {
+        let weight = formatKg(appState.bodyweightKg)
+        let people = appState.householdSize == 1 ? "solo" : "\(appState.householdSize) people"
+        return "\(weight) kg · \(appState.goal.label) · \(people)"
+    }
+
+    private func formatKg(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(Int(value))
+            : String(format: "%.1f", value)
+    }
+
+    private func formatCm(_ value: Double) -> String {
+        String(Int(value))
+    }
+
+    private func formatKcal(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
+
+    private func lastWorkoutLabel(for date: Date) -> String {
+        let interval = Date().timeIntervalSince(date)
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        if interval < 60 { return "just now" }
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func commitWeightTextIfNeeded() {
+        let normalized = weightText.replacingOccurrences(of: ",", with: ".")
+        if let value = Double(normalized), value > 30, value < 300 {
+            appState.bodyweightKg = value
+            weightText = formatKg(value)
+        } else {
+            weightText = formatKg(appState.bodyweightKg)
+        }
+    }
+
+    private func commitHeightTextIfNeeded() {
+        let normalized = heightText.replacingOccurrences(of: ",", with: ".")
+        if let value = Double(normalized), value > 100, value < 240 {
+            appState.heightCm = value
+            heightText = formatCm(value)
+        } else {
+            heightText = formatCm(appState.heightCm)
+        }
+    }
+
+    private func segmentedRow<Option: Hashable>(
+        title: String,
+        selection: Binding<Option>,
+        options: [Option],
+        label: @escaping (Option) -> String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.secondaryText)
+                .textCase(.uppercase)
+
+            HStack(spacing: 8) {
+                ForEach(options, id: \.self) { option in
+                    Button {
+                        selection.wrappedValue = option
+                    } label: {
+                        Text(label(option))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(option == selection.wrappedValue ? .white : AppTheme.text)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(option == selection.wrappedValue ? AppTheme.primary : AppTheme.mutedCard)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Goal row
+
+private struct GoalRow: View {
+    let goal: NutritionGoal
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: goal.icon)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(isSelected ? .white : AppTheme.primary)
+                    .frame(width: 38, height: 38)
+                    .background(isSelected ? AppTheme.primary : AppTheme.primary.opacity(0.12))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(goal.label)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppTheme.text)
+                    Text(goal.detail)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(AppTheme.primary)
+                }
+            }
+            .padding(12)
+            .background(isSelected ? AppTheme.primary.opacity(0.08) : AppTheme.mutedCard.opacity(0.6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? AppTheme.primary.opacity(0.6) : AppTheme.stroke, lineWidth: isSelected ? 1.5 : 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Macro chip
+
+private struct MacroChip: View {
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(color)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(AppTheme.text)
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(color.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+// MARK: - HealthKit stat
+
+private struct HKStat: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(tint)
+                .frame(width: 28, height: 28)
+                .background(tint.opacity(0.12))
+                .clipShape(Circle())
+
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.secondaryText)
+
+            Spacer()
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.text)
+                .monospacedDigit()
+        }
+    }
 }
 
 // MARK: - Inline stepper

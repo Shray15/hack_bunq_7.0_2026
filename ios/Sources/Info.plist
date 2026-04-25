@@ -20,6 +20,10 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Cooking Companion reads your weight, workouts, and activity to personalise calorie and macro targets.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Cooking Companion writes meal calories and protein to Apple Health so your nutrition logs stay in sync.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>We need microphone access for voice commands.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
