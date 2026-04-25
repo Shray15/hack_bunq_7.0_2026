@@ -4,6 +4,8 @@ from python_picnic_api2 import PicnicAPI
 
 load_dotenv()
 
+_PIC_IMG_BASE = "https://storefront-prod.nl.picnicinternational.com/static/images"
+
 _client = None
 
 
@@ -29,12 +31,13 @@ def search_product(query: str, max_results: int = 3) -> list[dict]:
         products = []
         for it in items[:max_results]:
             price_cents = it.get("display_price") or 0
+            img_id = it.get("image_id")
             products.append({
                 "product_id": f"pic_{it.get('id', 'unknown')}",
                 "name": it.get("name", "Unknown"),
                 "price_eur": round(price_cents / 100, 2),
                 "unit": it.get("unit_quantity", ""),
-                "image_url": it.get("image_id"),
+                "image_url": f"{_PIC_IMG_BASE}/{img_id}/regular.png" if img_id else None,
             })
         return products
     except Exception as e:

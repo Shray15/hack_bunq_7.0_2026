@@ -110,12 +110,22 @@ def _pick_closest_pack(candidates: list[dict], target_grams: float | None) -> di
     return best
 
 
-def _build_store_cart(ingredients: list[dict], store: str) -> list[dict]:
+def _build_store_cart(ingredients: list[dict], store: str) -> tuple[list[dict], list[str]]:
+    """Match each ingredient to a product at the given store.
+
+    Read-only: this never mutates the user's real store cart. Real-cart writes
+    happen at checkout, via a separate code path.
+
+    Returns (items, missing) where missing is the list of ingredient names
+    that produced no usable match.
+    """
     store_client = STORE_CLIENTS[store]
-    items = []
+    items: list[dict] = []
+    missing: list[str] = []
     for ing in ingredients:
         candidates = store_client.search_product(_translate_to_dutch(ing["name"]), max_results=10)
         if not candidates:
+            missing.append(ing["name"])
             continue
         target_grams = _ingredient_to_grams(
             float(ing.get("qty", 0) or 0),
@@ -124,26 +134,22 @@ def _build_store_cart(ingredients: list[dict], store: str) -> list[dict]:
         best = _pick_closest_pack(candidates, target_grams)
         pid = best.get("product_id")
         if not pid:
+            missing.append(ing["name"])
             continue
 
         qty = 1
-        if store == "picnic":
-            try:
-                picnic_client.add_to_cart(pid, count=qty)
-            except Exception as e:
-                print(f"Picnic add_to_cart failed for {ing['name']}: {e}")
-
         price = best.get("price_eur", 0.0)
         items.append({
             "ingredient": ing["name"],
             "product_id": pid,
             "name": best["name"],
+            "image_url": best.get("image_url"),
             "unit": best.get("unit", ""),
             "price_eur": price,
             "qty": qty,
             "subtotal_eur": round(price * qty, 2),
         })
-    return items
+    return items, missing
 
 
 class Ingredient(BaseModel):
@@ -176,20 +182,20 @@ def health():
 def cart_from_recipe(req: CartRequest):
     store = _validate_store(req.store)
     ingredients = [i.model_dump() for i in req.ingredients]
-    items = _build_store_cart(ingredients, store)
+    items, missing = _build_store_cart(ingredients, store)
     _carts[store] = items
     total = round(sum(i["subtotal_eur"] for i in items), 2)
-    return {"items": items, "total_eur": total, "store": store}
+    return {"items": items, "missing": missing, "total_eur": total, "store": store}
 
 
 @app.post("/cart/add")
 def add_to_cart(req: CartRequest):
     store = _validate_store(req.store)
     ingredients = [i.model_dump() for i in req.ingredients]
-    new_items = _build_store_cart(ingredients, store)
+    new_items, missing = _build_store_cart(ingredients, store)
     _carts[store].extend(new_items)
     total = round(sum(i["subtotal_eur"] for i in _carts[store]), 2)
-    return {"items": _carts[store], "total_eur": total, "store": store}
+    return {"items": _carts[store], "missing": missing, "total_eur": total, "store": store}
 
 
 @app.get("/cart/{store}")
@@ -204,11 +210,6 @@ def get_cart(store: str):
 def clear_cart(store: str):
     store = _validate_store(store)
     _carts[store] = []
-    if store == "picnic":
-        try:
-            picnic_client.clear_cart()
-        except Exception as e:
-            print(f"Picnic clear_cart failed: {e}")
     return {"message": f"{store} cart cleared"}
 
 
