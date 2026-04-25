@@ -39,13 +39,14 @@ services:
       AGENTCORE_MEMORY_ROLE_ARN: ${AGENTCORE_MEMORY_ROLE_ARN:-}
       AWS_BEDROCK_MODEL_ID: ${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-5-20250929-v1:0}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      BUNQ_API_KEY: ${BUNQ_API_KEY:-}
-      BUNQ_INSTALLATION_TOKEN: ${BUNQ_INSTALLATION_TOKEN:-}
+      GROCERY_MCP_URL: ${GROCERY_MCP_URL:-http://grocery-mcp:8001}
     ports:
       - "4567:4567"
     depends_on:
       postgres:
         condition: service_healthy
+      grocery-mcp:
+        condition: service_started
     networks:
       - cooking_net
     healthcheck:
@@ -54,6 +55,32 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
+  grocery-mcp:
+    image: ${GROCERY_MCP_IMAGE:?GROCERY_MCP_IMAGE is required (set in .env, e.g. ghcr.io/owner/repo-grocery-mcp:main-abc1234)}
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      BUNQ_API_KEY: ${BUNQ_API_KEY:?BUNQ_API_KEY is required}
+      BUNQ_DATA_DIR: /data/bunq
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_BEDROCK_MODEL_ID: ${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-sonnet-4-5-20250929-v1:0}
+      PICNIC_AUTH_TOKEN: ${PICNIC_AUTH_TOKEN:-}
+      PICNIC_EMAIL: ${PICNIC_EMAIL:-}
+      PICNIC_PASSWORD: ${PICNIC_PASSWORD:-}
+    volumes:
+      - /data/bunq:/data/bunq
+    networks:
+      - cooking_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 networks:
   cooking_net:

@@ -37,6 +37,8 @@ jobs:
             echo "sha_short=${SHA_SHORT}"
             echo "version=${BRANCH_TAG}-${SHA_SHORT}"
             echo "full_image=${IMAGE_REPO}:${BRANCH_TAG}-${SHA_SHORT}"
+            echo "mcp_image_repo=${IMAGE_REPO}-grocery-mcp"
+            echo "mcp_full_image=${IMAGE_REPO}-grocery-mcp:${BRANCH_TAG}-${SHA_SHORT}"
           } >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
@@ -47,7 +49,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -60,6 +62,18 @@ jobs:
             VERSION=${{ steps.tags.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build and push grocery-mcp image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp
+          file: ./mcp/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.mcp_image_repo }}:${{ steps.tags.outputs.branch_tag }}
+            ${{ steps.tags.outputs.mcp_full_image }}
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp
 
       - name: Configure SSH
         env:
@@ -77,6 +91,7 @@ jobs:
       - name: Stage .env file
         env:
           IMAGE: ${{ steps.tags.outputs.full_image }}
+          GROCERY_MCP_IMAGE: ${{ steps.tags.outputs.mcp_full_image }}
           VERSION: ${{ steps.tags.outputs.version }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -88,18 +103,22 @@ jobs:
           AGENTCORE_MEMORY_ROLE_ARN: ${{ secrets.AGENTCORE_MEMORY_ROLE_ARN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BUNQ_API_KEY: ${{ secrets.BUNQ_API_KEY }}
-          BUNQ_INSTALLATION_TOKEN: ${{ secrets.BUNQ_INSTALLATION_TOKEN }}
+          PICNIC_AUTH_TOKEN: ${{ secrets.PICNIC_AUTH_TOKEN }}
+          PICNIC_EMAIL: ${{ secrets.PICNIC_EMAIL }}
+          PICNIC_PASSWORD: ${{ secrets.PICNIC_PASSWORD }}
         run: |
           set -euo pipefail
           umask 077
           {
             echo "IMAGE=${IMAGE}"
+            echo "GROCERY_MCP_IMAGE=${GROCERY_MCP_IMAGE}"
             echo "VERSION=${VERSION}"
             echo "ENVIRONMENT=production"
             echo "POSTGRES_USER=cooking"
             echo "POSTGRES_DB=cooking"
             echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
             echo "JWT_SECRET=${JWT_SECRET}"
+            echo "GROCERY_MCP_URL=http://grocery-mcp:8001"
             echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
             echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
             echo "AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}"
@@ -109,7 +128,9 @@ jobs:
             echo "AWS_BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0"
             echo "GEMINI_API_KEY=${GEMINI_API_KEY}"
             echo "BUNQ_API_KEY=${BUNQ_API_KEY}"
-            echo "BUNQ_INSTALLATION_TOKEN=${BUNQ_INSTALLATION_TOKEN}"
+            echo "PICNIC_AUTH_TOKEN=${PICNIC_AUTH_TOKEN}"
+            echo "PICNIC_EMAIL=${PICNIC_EMAIL}"
+            echo "PICNIC_PASSWORD=${PICNIC_PASSWORD}"
           } > .env.deploy
 
       - name: Sync compose + .env to EC2
