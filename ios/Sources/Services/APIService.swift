@@ -27,9 +27,13 @@ class APIService {
     var baseURL = "http://107.20.41.184:4567"
     var useMockData = false
 
+    /// Every Codable in the project declares explicit snake_case CodingKeys, so
+    /// keyDecodingStrategy stays at the default. Combining .convertFromSnakeCase
+    /// with explicit keys causes every decode to fail because the strategy
+    /// converts JSON keys to camelCase BEFORE matching CodingKey raw values.
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
-        d.keyDecodingStrategy = .convertFromSnakeCase
+        d.dateDecodingStrategy = .iso8601
         return d
     }()
 
@@ -126,9 +130,8 @@ class APIService {
         guard let url = URL(string: "\(baseURL)/user/profile") else { throw APIError.invalidURL }
         var req = authedRequest(url: url, method: "PATCH")
 
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        req.httpBody = try encoder.encode(profile)
+        // CodingKeys already encode to snake_case; default key strategy keeps them as-is.
+        req.httpBody = try JSONEncoder().encode(profile)
 
         let (data, response) = try await URLSession.shared.data(for: req)
         let validData = try await handle(data, response)

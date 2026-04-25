@@ -3,8 +3,10 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var health: HealthKitService
+    @EnvironmentObject private var auth: AuthService
     @State private var weightText: String = ""
     @State private var heightText: String = ""
+    @State private var showSignOutConfirm = false
     @FocusState private var focusedField: ProfileField?
 
     enum ProfileField: Hashable {
@@ -24,6 +26,7 @@ struct ProfileView: View {
                         goalsCard
                         dietCard
                         healthCard
+                        signOutCard
                     }
                     .appScrollContentPadding()
                 }
@@ -49,7 +52,45 @@ struct ProfileView: View {
                     }
                 }
             }
+            .confirmationDialog(
+                "Sign out of Cooking Companion?",
+                isPresented: $showSignOutConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Sign out", role: .destructive) {
+                    auth.logout()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Saved recipes and local goals stay on this device. You can sign back in anytime.")
+            }
         }
+    }
+
+    // MARK: - Sign out
+
+    private var signOutCard: some View {
+        Button {
+            showSignOutConfirm = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.subheadline.weight(.semibold))
+                Text("Sign out")
+                    .font(.headline)
+            }
+            .foregroundStyle(.red)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.red.opacity(0.10))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.red.opacity(0.18), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Sign out of Cooking Companion")
     }
 
     // MARK: - Identity

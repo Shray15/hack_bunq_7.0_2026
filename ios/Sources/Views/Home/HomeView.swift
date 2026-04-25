@@ -172,7 +172,8 @@ struct CalorieProgressCard: View {
     let target: Int
 
     private var progress: Double {
-        min(Double(consumed) / Double(target), 1)
+        guard target > 0 else { return 0 }
+        return min(Double(consumed) / Double(target), 1)
     }
 
     var body: some View {

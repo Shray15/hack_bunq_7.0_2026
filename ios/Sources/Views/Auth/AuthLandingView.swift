@@ -32,15 +32,8 @@ struct AuthLandingView: View {
                 .padding(.bottom, 40)
             }
             .scrollDismissesKeyboard(.interactively)
-        }
-        .toolbar {
-            if focused != nil {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") { focused = nil }
-                        .fontWeight(.semibold)
-                }
-            }
+            .contentShape(Rectangle())
+            .onTapGesture { focused = nil }
         }
     }
 
@@ -186,8 +179,12 @@ struct AuthLandingView: View {
             Group {
                 if secure {
                     SecureField(placeholder, text: text)
+                        .submitLabel(.go)
+                        .onSubmit { submit() }
                 } else {
                     TextField(placeholder, text: text)
+                        .submitLabel(.next)
+                        .onSubmit { focused = .password }
                 }
             }
             .textFieldStyle(.plain)

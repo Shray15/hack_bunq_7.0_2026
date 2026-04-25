@@ -449,21 +449,47 @@ final class AppState: ObservableObject {
 
     // MARK: - Mock seed
 
+    /// Always-seeded baseline that holds for both mock and live modes:
+    /// three empty meal slots so chat-generated recipes have somewhere to land.
+    /// Live mode stops here — the user populates everything themselves.
+    /// Mock mode layers in demo content (sample recipes, historical weights,
+    /// pre-eaten breakfast/lunch) so the UI looks alive without a backend.
     private func loadMock() {
         let calendar = Calendar.current
         let now = Date()
-        let breakfast = calendar.date(bySettingHour: 8, minute: 10, second: 0, of: now) ?? now
-        let lunch = calendar.date(bySettingHour: 12, minute: 35, second: 0, of: now) ?? now
-        recipeLibrary = MockData.recipes
 
+        // Stored saves persist across sessions in any mode.
         if let storedRecipeIDs = UserDefaults.standard.array(forKey: Self.savedRecipeIDsKey) as? [String] {
             savedRecipeIDs = Set(storedRecipeIDs)
-        } else if let starterRecipe = MockData.recipes.first {
+        }
+
+        // Empty slots so MealRow renders the "Plan this meal" CTA from launch.
+        plannedMeals = [
+            PlannedMeal(slot: "Breakfast", recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
+            PlannedMeal(slot: "Lunch",     recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
+            PlannedMeal(slot: "Dinner",    recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
+        ]
+        upcomingDelivery = nil
+
+        guard APIService.shared.useMockData else {
+            // Live backend: fresh accounts start with a clean slate. Recipe
+            // library, weight history, and weekly kcal history all populate as
+            // the user actually uses the app.
+            recipeLibrary = []
+            weeklyHistory = []
+            return
+        }
+
+        // Demo mode: seed a richer starting state.
+        let breakfast = calendar.date(bySettingHour: 8, minute: 10, second: 0, of: now) ?? now
+        let lunch = calendar.date(bySettingHour: 12, minute: 35, second: 0, of: now) ?? now
+
+        recipeLibrary = MockData.recipes
+        if savedRecipeIDs.isEmpty, let starterRecipe = MockData.recipes.first {
             savedRecipeIDs = [starterRecipe.id]
         }
 
         if weightLog.isEmpty {
-            // Seed a small history so the trend chart has something to show on first launch.
             weightLog = (0..<7).map { offset in
                 let date = calendar.date(byAdding: .day, value: -offset, to: now) ?? now
                 let drift = Double.random(in: -0.4...0.4)
@@ -507,7 +533,6 @@ final class AppState: ObservableObject {
                 loggedAt: nil
             ),
         ]
-        upcomingDelivery = nil
         weeklyHistory = generateMockHistory(today: now, calendar: calendar)
     }
 
