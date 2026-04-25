@@ -42,6 +42,20 @@ async def select_store(
     )
 
 
+@router.post("/{cart_id}/commit", response_model=CartItemsResponse)
+async def commit_cart(
+    cart_id: uuid.UUID,
+    user_id: CurrentUserId,
+    db: DbSession,
+) -> CartItemsResponse:
+    """iOS calls this when the user taps "Add to cart" — pushes the current
+    active items into the real Picnic cart (AH has no equivalent write).
+    """
+    return await cart_flow.commit_to_store(
+        db=db, user_id=user_id, cart_id=cart_id
+    )
+
+
 @router.patch("/{cart_id}/items/{item_id}", response_model=CartItem)
 async def patch_item(
     cart_id: uuid.UUID,

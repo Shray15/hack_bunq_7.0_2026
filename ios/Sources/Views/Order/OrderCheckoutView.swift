@@ -161,19 +161,21 @@ struct OrderCheckoutView: View {
         .disabled(!hasIncludedItems || isCommitting)
     }
 
-    /// Push every item's `removed` state to the backend so the eventual
-    /// `/order/checkout` (and the Picnic cart commit it triggers) reflects
-    /// what the user actually selected. Sends one PATCH per cart item in
-    /// parallel; a single failure aborts and surfaces an alert.
+    /// Two-step commit: (1) PATCH every item's `removed` state in parallel
+    /// so the backend cart matches the basket, then (2) POST /cart/{id}/commit
+    /// to push the kept items into the real Picnic cart. Without step 2 the
+    /// user only sees items in picnic.app after they actually pay; the
+    /// natural mental model is "Add to cart = it's in my cart now".
     private func commitAndAdvance() async {
         guard hasIncludedItems else { return }
         isCommitting = true
         defer { isCommitting = false }
 
+        let api = APIService.shared
+        let cartId = cart.cartId
+
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
-                let api = APIService.shared
-                let cartId = cart.cartId
                 for item in cart.items {
                     let removed = excludedItemIDs.contains(item.id)
                     group.addTask {
@@ -186,6 +188,7 @@ struct OrderCheckoutView: View {
                 }
                 try await group.waitForAll()
             }
+            try await api.commitCart(cartId: cartId)
             navigateToReview = true
         } catch {
             commitErrorMsg = error.localizedDescription
