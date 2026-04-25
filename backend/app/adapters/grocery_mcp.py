@@ -53,6 +53,10 @@ class GroceryMcpClient(Protocol):
 
     async def get_payment_status(self, request_id: str) -> dict[str, Any]: ...
 
+    async def commit_picnic_cart(
+        self, items: list[dict[str, Any]]
+    ) -> dict[str, Any]: ...
+
     async def aclose(self) -> None: ...
 
 
@@ -135,6 +139,11 @@ class RealGroceryMcpClient:
     async def get_payment_status(self, request_id: str) -> dict[str, Any]:
         return await self._call("get_payment_status", {"request_id": request_id})
 
+    async def commit_picnic_cart(
+        self, items: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        return await self._call("commit_picnic_cart", {"items": items})
+
 
 def _parse_tool_result(name: str, result: Any) -> dict[str, Any]:
     """Pull a JSON dict out of an MCP CallToolResult."""
@@ -162,46 +171,46 @@ def _parse_tool_result(name: str, result: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-# Per-store canned product mapping. Names roughly match the demo recipes the
-# Phase 2 stub adapter emits (chicken breast, jasmine rice, lemon, ...).
+# Per-store canned product mapping. Keys are canonical Dutch ingredient names
+# — same convention real Bedrock + the real grocery-mcp produce.
 _STUB_PRODUCT_TEMPLATES: dict[str, dict[str, dict[str, Any]]] = {
     "ah": {
-        "chicken breast": {
+        "kipfilet": {
             "product_id": "ah-7421",
             "name": "AH Kipfilet 500g",
             "image_url": "https://placehold.co/240x240/png?text=Kipfilet",
             "unit": "500 g",
             "price_eur": 6.99,
         },
-        "jasmine rice": {
+        "jasmijnrijst": {
             "product_id": "ah-1102",
             "name": "AH Jasmijnrijst 1kg",
             "image_url": "https://placehold.co/240x240/png?text=Rice",
             "unit": "1 kg",
             "price_eur": 2.49,
         },
-        "lemon": {
+        "citroen": {
             "product_id": "ah-9001",
             "name": "AH Citroen los",
             "image_url": "https://placehold.co/240x240/png?text=Lemon",
             "unit": "1 pc",
             "price_eur": 0.45,
         },
-        "garlic": {
+        "knoflook": {
             "product_id": "ah-2233",
             "name": "AH Knoflook bol",
             "image_url": "https://placehold.co/240x240/png?text=Garlic",
             "unit": "1 pc",
             "price_eur": 0.69,
         },
-        "olive oil": {
+        "olijfolie": {
             "product_id": "ah-5566",
             "name": "AH Olijfolie extra vergine 500ml",
             "image_url": "https://placehold.co/240x240/png?text=Olive+Oil",
             "unit": "500 ml",
             "price_eur": 4.49,
         },
-        "parsley": {
+        "peterselie": {
             "product_id": "ah-3344",
             "name": "AH Verse peterselie",
             "image_url": "https://placehold.co/240x240/png?text=Parsley",
@@ -210,47 +219,47 @@ _STUB_PRODUCT_TEMPLATES: dict[str, dict[str, dict[str, Any]]] = {
         },
     },
     "picnic": {
-        "chicken breast": {
+        "kipfilet": {
             "product_id": "pic-7421",
             "name": "Kipfilet naturel 500g",
             "image_url": "https://placehold.co/240x240/png?text=Kipfilet",
             "unit": "500 g",
             "price_eur": 6.49,
         },
-        "jasmine rice": {
+        "jasmijnrijst": {
             "product_id": "pic-1102",
             "name": "Jasmijnrijst 500g",
             "image_url": "https://placehold.co/240x240/png?text=Rice",
             "unit": "500 g",
             "price_eur": 1.79,
         },
-        "lemon": {
+        "citroen": {
             "product_id": "pic-9001",
             "name": "Citroen 4-pack",
             "image_url": "https://placehold.co/240x240/png?text=Lemons",
             "unit": "4 pc",
             "price_eur": 1.69,
         },
-        "garlic": {
+        "knoflook": {
             "product_id": "pic-2233",
             "name": "Knoflook 2-pack",
             "image_url": "https://placehold.co/240x240/png?text=Garlic",
             "unit": "2 pc",
             "price_eur": 1.09,
         },
-        "olive oil": {
+        "olijfolie": {
             "product_id": "pic-5566",
             "name": "Olijfolie 750ml",
             "image_url": "https://placehold.co/240x240/png?text=Olive+Oil",
             "unit": "750 ml",
             "price_eur": 5.99,
         },
-        # `parsley` deliberately missing at picnic — it triggers the
-        # substitution flow. `italian parsley` IS in the catalogue so a
+        # `peterselie` deliberately missing at picnic — it triggers the
+        # substitution flow. `italiaanse peterselie` IS in the catalogue so a
         # monkey-patched suggest_substitutions can land a valid swap.
-        "italian parsley": {
+        "italiaanse peterselie": {
             "product_id": "pic-3344b",
-            "name": "Italian peterselie",
+            "name": "Italiaanse peterselie",
             "image_url": "https://placehold.co/240x240/png?text=Italian+Parsley",
             "unit": "1 bunch",
             "price_eur": 1.39,
@@ -262,6 +271,7 @@ _STUB_PRODUCT_TEMPLATES: dict[str, dict[str, dict[str, Any]]] = {
 class StubGroceryMcpClient:
     def __init__(self) -> None:
         self._payment_status: dict[str, str] = {}
+        self.committed_picnic_calls: list[list[dict[str, Any]]] = []
 
     async def connect(self) -> None:
         log.info("grocery_mcp_stub_active")
@@ -315,6 +325,13 @@ class StubGroceryMcpClient:
             "status": status,
             "paid_at": datetime.now(UTC).isoformat() if status == "paid" else None,
         }
+
+    async def commit_picnic_cart(
+        self, items: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        # Tests inspect `committed_picnic_calls` to assert the wiring fired.
+        self.committed_picnic_calls.append(list(items))
+        return {"store": "picnic", "committed": len(items), "failures": []}
 
 
 # ---------------------------------------------------------------------------
@@ -390,3 +407,13 @@ async def create_payment_request(
 
 async def get_payment_status(request_id: str) -> dict[str, Any]:
     return await _resolve_client().get_payment_status(request_id)
+
+
+async def commit_picnic_cart(items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Replace the user's Picnic cart with the given items.
+
+    Picnic-only (AH has no equivalent). The grocery-mcp tool clears the
+    existing cart and adds each item; failures per item are logged on the
+    MCP side, not surfaced.
+    """
+    return await _resolve_client().commit_picnic_cart(items)

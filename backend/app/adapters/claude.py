@@ -156,8 +156,8 @@ _SUBSTITUTIONS_TOOL = {
     "name": "emit_substitutions",
     "description": (
         "Emit up to 3 culinary substitutes for the missing ingredient, ordered "
-        "by how well they preserve the dish's character. Use canonical English "
-        "names that a Dutch supermarket catalogue would carry."
+        "by how well they preserve the dish's character. Use canonical Dutch "
+        "names that an AH or Picnic catalogue would carry."
     ),
     "input_schema": {
         "type": "object",
@@ -189,7 +189,17 @@ plain prose. Your output must satisfy these rules:
 - prep_time_min is a realistic integer between 10 and 90.
 - Ingredient quantities are numeric in metric units (g, kg, ml, l, tsp, tbsp,
   pc, cloves, bunch). Never "to taste" or ranges.
-- Steps are 5 to 8 entries, each 1–2 sentences, sequential, no numbering.
+- Ingredient NAMES must be in canonical Dutch — the names AH and Picnic use in
+  their catalogues. Examples: "kipfilet" (not "chicken breast"), "knoflook"
+  (not "garlic"), "olijfolie" (not "olive oil"), "jasmijnrijst", "citroen",
+  "peterselie", "rundergehakt", "zalm". The substitutions tool also returns
+  Dutch names.
+- DO NOT include basic pantry seasonings the user already has at home:
+  zout (salt), peper (pepper), suiker (sugar), water, ijs. These should never
+  appear in the ingredient list.
+- Steps are 5 to 8 entries, each 1–2 sentences, sequential, no numbering. Steps
+  may freely reference salt/pepper/water — those are cooking instructions, not
+  shopping items.
 - Macros are integer kcal / grams per serving (not for the whole batch).
 - Refuse politely (but still via the tool) if the request is unsafe (e.g. an
   ingredient the user is allergic to). Use the `notes` field to flag any
@@ -433,12 +443,12 @@ def _stub_nlu(transcript: str) -> NLUResult:
 def _stub_ingredients(dish: ProposedDish, people: int) -> list[RecipeIngredient]:
     base = max(1, people)
     return [
-        RecipeIngredient(name="chicken breast", qty=200 * base, unit="g"),
-        RecipeIngredient(name="jasmine rice", qty=100 * base, unit="g"),
-        RecipeIngredient(name="lemon", qty=1 * base, unit="pc"),
-        RecipeIngredient(name="garlic", qty=2 * base, unit="cloves"),
-        RecipeIngredient(name="olive oil", qty=1 * base, unit="tbsp"),
-        RecipeIngredient(name="parsley", qty=1, unit="bunch"),
+        RecipeIngredient(name="kipfilet", qty=200 * base, unit="g"),
+        RecipeIngredient(name="jasmijnrijst", qty=100 * base, unit="g"),
+        RecipeIngredient(name="citroen", qty=1 * base, unit="pc"),
+        RecipeIngredient(name="knoflook", qty=2 * base, unit="cloves"),
+        RecipeIngredient(name="olijfolie", qty=1 * base, unit="tbsp"),
+        RecipeIngredient(name="peterselie", qty=1, unit="bunch"),
     ]
 
 

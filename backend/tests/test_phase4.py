@@ -33,8 +33,8 @@ async def test_substitution_swaps_missing_picnic_parsley(
     headers = {"Authorization": f"Bearer {token}"}
 
     async def fake_suggest(*, ingredient: str, dish_name: str, store: str) -> list[str]:
-        if ingredient.lower() == "parsley":
-            return ["italian parsley"]
+        if ingredient.lower() == "peterselie":
+            return ["italiaanse peterselie"]
         return []
 
     monkeypatch.setattr(claude, "suggest_substitutions", fake_suggest)
@@ -87,7 +87,7 @@ async def test_substitution_swaps_missing_picnic_parsley(
         )
     ).json()
     italian = [
-        i for i in items["items"] if i["ingredient_name"] == "italian parsley"
+        i for i in items["items"] if i["ingredient_name"] == "italiaanse peterselie"
     ]
     assert italian, items["items"]
 

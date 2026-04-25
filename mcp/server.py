@@ -3,20 +3,26 @@
 Listens on 0.0.0.0:8001. Backend connects via streamable HTTP transport
 at http://grocery-mcp:8001/mcp.
 
-Tools (all stateless):
-- search_products(store, ingredients) -> {store, items, missing, total_eur}
+Tools:
+- search_products(store, ingredients) -> {store, items, missing, total_eur}    (read-only)
 - create_payment_request(amount_eur, description) -> {request_id, payment_url}
 - get_payment_status(request_id) -> {request_id, status, paid_at}
+- commit_picnic_cart(items) -> {committed, store}                              (Picnic write)
 """
 from __future__ import annotations
+
+import logging
 
 from pydantic import BaseModel, Field
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from mcp.server.fastmcp import FastMCP
 
-from matching import build_store_cart
 import bunq_payment
+import picnic_client
+from matching import build_store_cart
+
+log = logging.getLogger(__name__)
 
 mcp = FastMCP(
     "grocery-mcp",
@@ -77,6 +83,44 @@ def create_payment_request(amount_eur: float, description: str = "Groceries") ->
 )
 def get_payment_status(request_id: str) -> dict:
     return bunq_payment.get_payment_status(request_id)
+
+
+class CartCommitItem(BaseModel):
+    product_id: str = Field(description="Picnic product id (with or without 'pic_' prefix).")
+    qty: int = Field(default=1, ge=1, description="How many of this product to add.")
+
+
+@mcp.tool(
+    name="commit_picnic_cart",
+    description=(
+        "Replace the contents of the authenticated Picnic cart with the given "
+        "items. Clears the existing cart first, then adds each product. "
+        "Picnic-only — AH has no equivalent endpoint. Returns the count of "
+        "items written. Errors per item are logged but don't fail the whole call."
+    ),
+)
+def commit_picnic_cart(items: list[CartCommitItem]) -> dict:
+    try:
+        picnic_client.clear_cart()
+    except Exception as exc:  # noqa: BLE001 — best effort; clear failures shouldn't block adds
+        log.warning("commit_picnic_cart_clear_failed: %s", exc)
+
+    written = 0
+    failures: list[dict] = []
+    for item in items:
+        try:
+            picnic_client.add_to_cart(item.product_id, count=int(item.qty))
+            written += 1
+        except Exception as exc:  # noqa: BLE001
+            log.warning(
+                "commit_picnic_cart_add_failed: product_id=%s qty=%s — %s",
+                item.product_id,
+                item.qty,
+                exc,
+            )
+            failures.append({"product_id": item.product_id, "error": str(exc)})
+
+    return {"store": "picnic", "committed": written, "failures": failures}
 
 
 @mcp.custom_route("/health", methods=["GET"])

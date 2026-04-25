@@ -73,7 +73,7 @@ async def test_cart_from_recipe_returns_two_store_comparison(
         assert cart_row.selected_store is None
         assert cart_row.people == 2
         assert "ah" in cart_row.missing_by_store
-        assert cart_row.missing_by_store["picnic"] == ["parsley"]
+        assert cart_row.missing_by_store["picnic"] == ["peterselie"]
 
 
 async def test_select_store_then_patch_item_then_checkout_paid(
@@ -213,6 +213,78 @@ async def test_cart_404_for_other_users_cart(client: AsyncClient) -> None:
         headers=b_headers,
     )
     assert bobs_view.status_code == 404
+
+
+async def test_select_store_picnic_commits_to_real_cart(
+    client: AsyncClient,
+) -> None:
+    """Picking Picnic should fire commit_picnic_cart with the active items."""
+    from app.adapters import grocery_mcp
+    from app.adapters.grocery_mcp import StubGroceryMcpClient
+
+    stub = grocery_mcp._client
+    assert isinstance(stub, StubGroceryMcpClient)
+    stub.committed_picnic_calls.clear()
+
+    token = await signup_and_token(client, email="picnic-commit@test.dev")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    recipe_id = await _generate_recipe(client, headers)
+    cart = (
+        await client.post(
+            "/cart/from-recipe",
+            json={"recipe_id": recipe_id, "people": 1},
+            headers=headers,
+        )
+    ).json()
+
+    sel = await client.post(
+        f"/cart/{cart['cart_id']}/select-store",
+        json={"store": "picnic"},
+        headers=headers,
+    )
+    assert sel.status_code == 200
+
+    # The commit runs as a fire-and-forget asyncio task; give it a tick.
+    await asyncio.sleep(0.1)
+
+    assert stub.committed_picnic_calls, "commit_picnic_cart was never invoked"
+    last_call = stub.committed_picnic_calls[-1]
+    pic_items = sel.json()["items"]
+    assert len(last_call) == sum(1 for i in pic_items if i["removed_at"] is None)
+    for entry in last_call:
+        assert entry["product_id"].startswith("pic-")
+        assert entry["qty"] >= 1
+
+
+async def test_select_store_ah_does_not_commit_to_picnic(
+    client: AsyncClient,
+) -> None:
+    """AH selection must NOT touch the Picnic cart."""
+    from app.adapters import grocery_mcp
+    from app.adapters.grocery_mcp import StubGroceryMcpClient
+
+    stub = grocery_mcp._client
+    assert isinstance(stub, StubGroceryMcpClient)
+    stub.committed_picnic_calls.clear()
+
+    token = await signup_and_token(client, email="ah-no-commit@test.dev")
+    headers = {"Authorization": f"Bearer {token}"}
+    recipe_id = await _generate_recipe(client, headers)
+    cart = (
+        await client.post(
+            "/cart/from-recipe",
+            json={"recipe_id": recipe_id, "people": 1},
+            headers=headers,
+        )
+    ).json()
+    await client.post(
+        f"/cart/{cart['cart_id']}/select-store",
+        json={"store": "ah"},
+        headers=headers,
+    )
+    await asyncio.sleep(0.1)
+    assert stub.committed_picnic_calls == []
 
 
 async def test_get_and_list_orders(client: AsyncClient) -> None:
