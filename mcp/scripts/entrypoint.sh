@@ -9,4 +9,4 @@ if [ ! -f "$DATA_DIR/bunq_sandbox.conf" ] || [ ! -f "$DATA_DIR/account_id" ]; th
     python /app/scripts/bootstrap_bunq.py
 fi
 
-exec uvicorn grocery_api:app --host 0.0.0.0 --port 8001
+exec python /app/server.py

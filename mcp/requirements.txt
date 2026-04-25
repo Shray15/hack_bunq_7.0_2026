@@ -1,5 +1,4 @@
-fastapi
-uvicorn
+mcp
 requests
 bunq-sdk
 python-dotenv
