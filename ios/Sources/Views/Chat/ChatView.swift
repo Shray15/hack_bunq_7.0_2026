@@ -3,12 +3,14 @@ import SwiftUI
 struct ChatView: View {
     @StateObject private var vm = ChatViewModel()
     @StateObject private var speech = SpeechService()
+    @EnvironmentObject private var appState: AppState
     @State private var inputText = ""
     @State private var selectedRecipe: Recipe?
     @State private var hasRequestedSpeechPermission = false
     @State private var shouldSubmitRecordedTranscript = false
     @State private var recordingErrorMessage: String?
     @State private var showClearConfirm = false
+    @State private var lastSpokenMessageID: UUID?
     @FocusState private var isInputFocused: Bool
     @Environment(\.openURL) private var openURL
 
@@ -57,18 +59,24 @@ struct ChatView: View {
                     vm.reset()
                     inputText = ""
                     recordingErrorMessage = nil
+                    speech.stopSpeaking()
+                    lastSpokenMessageID = nil
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This removes the current brief and recipe options.")
             }
-            .sheet(item: $selectedRecipe) { recipe in
+            .navigationDestination(item: $selectedRecipe) { recipe in
                 RecipeDetailView(recipe: recipe)
             }
         }
         .task {
+            submitPendingPlanningBrief()
             await speech.requestAuthorization()
             hasRequestedSpeechPermission = true
+        }
+        .onChange(of: appState.planningPrefill) {
+            submitPendingPlanningBrief()
         }
         .onChange(of: speech.isRecording, initial: false) { wasRecording, isRecording in
             guard wasRecording, !isRecording, shouldSubmitRecordedTranscript else { return }
@@ -120,6 +128,10 @@ struct ChatView: View {
                     withAnimation(.easeOut(duration: 0.22)) {
                         proxy.scrollTo(last.id, anchor: .bottom)
                     }
+                    if last.role == .assistant, last.id != lastSpokenMessageID, !last.text.isEmpty {
+                        lastSpokenMessageID = last.id
+                        speech.speak(last.text)
+                    }
                 }
             }
             .onChange(of: vm.streamingText) {
@@ -151,10 +163,6 @@ struct ChatView: View {
 
     private var composerArea: some View {
         VStack(spacing: 8) {
-            if shouldShowOptionsRail {
-                currentOptionsRail
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
             if hasContextStrip {
                 contextStrip
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -171,30 +179,6 @@ struct ChatView: View {
                 .frame(height: 1)
         }
         .animation(.easeOut(duration: 0.18), value: contextStripKey)
-        .animation(.easeOut(duration: 0.22), value: shouldShowOptionsRail)
-    }
-
-    private var shouldShowOptionsRail: Bool {
-        guard !vm.suggestedRecipes.isEmpty else { return false }
-        if isInputFocused || speech.isRecording { return false }
-        guard let lastRecipeIdx = vm.messages.lastIndex(where: {
-            ($0.recipes?.isEmpty == false)
-        }) else { return false }
-        return lastRecipeIdx < vm.messages.count - 1
-    }
-
-    private var currentOptionsRail: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(vm.suggestedRecipes) { recipe in
-                    OptionChip(recipe: recipe) {
-                        selectedRecipe = recipe
-                    }
-                }
-            }
-            .padding(.horizontal, 4)
-        }
-        .scrollClipDisabled()
     }
 
     private var composerBar: some View {
@@ -282,8 +266,6 @@ struct ChatView: View {
                 primaryMicButton
                     .transition(.scale.combined(with: .opacity))
             } else {
-                secondaryMicButton
-                    .transition(.scale.combined(with: .opacity))
                 sendButton
                     .transition(.scale.combined(with: .opacity))
             }
@@ -311,21 +293,6 @@ struct ChatView: View {
         }
         .disabled(speechPermissionDenied)
         .accessibilityLabel("Start voice brief")
-    }
-
-    private var secondaryMicButton: some View {
-        Button {
-            handleVoiceTap()
-        } label: {
-            Image(systemName: "mic.fill")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(speechPermissionDenied ? AppTheme.secondaryText : AppTheme.primary)
-                .frame(width: 32, height: 32)
-                .background((speechPermissionDenied ? AppTheme.secondaryText : AppTheme.primary).opacity(0.12))
-                .clipShape(Circle())
-        }
-        .disabled(speechPermissionDenied)
-        .accessibilityLabel("Switch to voice")
     }
 
     private var sendButton: some View {
@@ -490,10 +457,16 @@ struct ChatView: View {
     private func send(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        speech.stopSpeaking()
         isInputFocused = false
         inputText = ""
         recordingErrorMessage = nil
-        vm.send(trimmed)
+        vm.send(trimmed, profile: appState.userProfile())
+    }
+
+    private func submitPendingPlanningBrief() {
+        guard let brief = appState.consumePlanningPrefill() else { return }
+        send(brief)
     }
 }
 
@@ -765,35 +738,5 @@ struct AudioWaveBars: View {
             .frame(height: maxHeight)
         }
         .accessibilityHidden(true)
-    }
-}
-
-private struct OptionChip: View {
-    let recipe: Recipe
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Text(recipe.name)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppTheme.text)
-                    .lineLimit(1)
-                Text("· \(recipe.calories) kcal")
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.secondaryText)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .background(AppTheme.card)
-            .overlay {
-                Capsule()
-                    .stroke(AppTheme.stroke, lineWidth: 1)
-            }
-            .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(recipe.name), \(recipe.calories) calories")
     }
 }
