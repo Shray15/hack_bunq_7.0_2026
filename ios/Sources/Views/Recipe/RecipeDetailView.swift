@@ -95,6 +95,17 @@ struct RecipeDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    appState.toggleSavedRecipe(recipe)
+                } label: {
+                    Image(systemName: appState.isRecipeSaved(recipe) ? "bookmark.fill" : "bookmark")
+                        .foregroundStyle(AppTheme.primary)
+                }
+                .accessibilityLabel(appState.isRecipeSaved(recipe) ? "Remove saved recipe" : "Save recipe")
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             Button {
                 showingOrder = true
@@ -108,7 +119,13 @@ struct RecipeDetailView: View {
             .background(.ultraThinMaterial)
         }
         .sheet(isPresented: $showingOrder) {
-            OrderCheckoutView(recipe: recipe, servings: currentServings.wrappedValue)
+            NavigationStack {
+                StoreComparisonView(
+                    recipe: recipe,
+                    servings: currentServings.wrappedValue,
+                    onClose: { showingOrder = false }
+                )
+            }
         }
     }
 

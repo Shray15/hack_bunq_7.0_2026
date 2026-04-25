@@ -9,27 +9,225 @@ struct DayKcal: Identifiable, Hashable {
 
 @MainActor
 final class AppState: ObservableObject {
+    private static let savedRecipeIDsKey   = "saved_recipe_ids"
+    private static let bodyStatsKey        = "body_stats_v1"
+    private static let weightLogKey        = "weight_log_v1"
+    private static let waterByDateKey      = "water_by_date_v1"
+
     @Published var displayName: String = "Sai"
-    @Published var dietType: DietType = .balanced
+    @Published var dietType: DietType = .balanced { didSet { schedulePatchIfChanged(dietType, oldValue) } }
     @Published var householdSize: Int = 1
-    @Published var bunqConnected: Bool = false
-    @Published var dailyCalorieTarget: Int = 1800
+
+    // MARK: - Body stats & goal (persisted)
+
+    @Published var bodyweightKg: Double = 70 { didSet { persistBodyStats(); schedulePatchIfChanged(bodyweightKg, oldValue) } }
+    @Published var heightCm: Double = 175 { didSet { persistBodyStats(); schedulePatchIfChanged(heightCm, oldValue) } }
+    @Published var age: Int = 30 { didSet { persistBodyStats(); schedulePatchIfChanged(age, oldValue) } }
+    @Published var biologicalSex: BiologicalSex = .male { didSet { persistBodyStats(); schedulePatchIfChanged(biologicalSex, oldValue) } }
+    @Published var goal: NutritionGoal = .maintain { didSet { persistBodyStats(); schedulePatchIfChanged(goal, oldValue) } }
+    @Published var activityLevel: ActivityLevel = .moderate { didSet { persistBodyStats(); schedulePatchIfChanged(activityLevel, oldValue) } }
+
+    // MARK: - Library & meal state
+
+    @Published var recipeLibrary: [Recipe] = []
+    @Published var savedRecipeIDs: Set<String> = [] {
+        didSet {
+            UserDefaults.standard.set(Array(savedRecipeIDs), forKey: Self.savedRecipeIDsKey)
+        }
+    }
     @Published var plannedMeals: [PlannedMeal] = []
     @Published var weeklyHistory: [DayKcal] = []
     @Published var upcomingDelivery: Date?
     @Published var planningPrefill: String?
     @Published var pendingMealSlot: String?
 
-    init() { loadMock() }
+    // MARK: - Bodyweight log & water
 
-    func userProfile() -> UserProfile {
-        UserProfile(
-            dietType: dietType,
+    @Published var weightLog: [WeightEntry] = [] { didSet { persistWeightLog() } }
+    @Published private(set) var waterByDate: [String: Int] = [:] {
+        didSet { persistWaterLog() }
+    }
+
+    // MARK: - Backend profile sync state
+
+    /// True once we've at least attempted a fetch this session. Stops the
+    /// debounced PATCH from racing the initial GET on launch.
+    @Published private(set) var hasFetchedBackendProfile: Bool = false
+    private var profileSyncTask: Task<Void, Never>?
+
+    // MARK: - HealthKit-sourced state
+
+    @Published var lastWorkoutEndedAt: Date?
+    @Published var todayActiveEnergyKcal: Int = 0
+    @Published var healthKitAuthorized: Bool = false
+
+    init() {
+        loadPersistence()
+        loadMock()
+    }
+
+    // MARK: - Persistence
+
+    private func persistBodyStats() {
+        let snapshot = BodyStatsSnapshot(
+            bodyweightKg: bodyweightKg,
+            heightCm: heightCm,
+            age: age,
+            biologicalSex: biologicalSex,
+            goal: goal,
+            activityLevel: activityLevel
+        )
+        if let data = try? JSONEncoder().encode(snapshot) {
+            UserDefaults.standard.set(data, forKey: Self.bodyStatsKey)
+        }
+    }
+
+    private func persistWeightLog() {
+        if let data = try? JSONEncoder().encode(weightLog) {
+            UserDefaults.standard.set(data, forKey: Self.weightLogKey)
+        }
+    }
+
+    private func persistWaterLog() {
+        if let data = try? JSONEncoder().encode(waterByDate) {
+            UserDefaults.standard.set(data, forKey: Self.waterByDateKey)
+        }
+    }
+
+    private func loadPersistence() {
+        if let data = UserDefaults.standard.data(forKey: Self.bodyStatsKey),
+           let snapshot = try? JSONDecoder().decode(BodyStatsSnapshot.self, from: data) {
+            bodyweightKg = snapshot.bodyweightKg
+            heightCm = snapshot.heightCm
+            age = snapshot.age
+            biologicalSex = snapshot.biologicalSex
+            goal = snapshot.goal
+            activityLevel = snapshot.activityLevel
+        }
+        if let data = UserDefaults.standard.data(forKey: Self.weightLogKey),
+           let log = try? JSONDecoder().decode([WeightEntry].self, from: data) {
+            weightLog = log
+        }
+        if let data = UserDefaults.standard.data(forKey: Self.waterByDateKey),
+           let dict = try? JSONDecoder().decode([String: Int].self, from: data) {
+            waterByDate = dict
+        }
+    }
+
+    // MARK: - Profile out
+
+    // MARK: - Backend profile sync
+
+    /// Fetch `/user/profile` and apply any server-side fields we honour.
+    /// Called once per authenticated session from the root view.
+    func refreshProfileFromBackend() async {
+        do {
+            let profile = try await APIService.shared.getProfile()
+            ingest(profile)
+        } catch {
+            // Surfacing this is low priority — the user can keep editing locally
+            // and the next PATCH will resync.
+        }
+        hasFetchedBackendProfile = true
+    }
+
+    /// Apply the server's view of the profile to local state, mapping wire
+    /// strings back to typed enums. Body stats / goal / activity remain local
+    /// because the backend does not store them.
+    private func ingest(_ profile: BackendUserProfile) {
+        if let raw = profile.diet, let mapped = DietType.fromBackend(raw), mapped != dietType {
+            // Set without re-triggering a PATCH — the backend just told us this value.
+            withoutPatchScheduling { dietType = mapped }
+        }
+    }
+
+    /// Build the wire shape from current local state. Sent on every PATCH.
+    func currentBackendProfile() -> BackendUserProfile {
+        let macros = macroTargets
+        return BackendUserProfile(
+            diet: dietType.backendString,
+            allergies: nil,
             dailyCalorieTarget: dailyCalorieTarget,
-            householdSize: householdSize,
-            bunqConnected: bunqConnected
+            proteinGTarget: macros.protein,
+            carbsGTarget: macros.carbs,
+            fatGTarget: macros.fat,
+            storePriority: ["ah", "picnic"]
         )
     }
+
+    /// Trigger a debounced PATCH. Skips the call when we haven't fetched yet
+    /// (avoids racing the initial GET).
+    private func schedulePatchIfChanged<Value: Equatable>(_ newValue: Value, _ oldValue: Value) {
+        guard newValue != oldValue else { return }
+        guard !suppressPatchScheduling else { return }
+        guard hasFetchedBackendProfile else { return }
+        profileSyncTask?.cancel()
+        profileSyncTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard !Task.isCancelled, let self else { return }
+            let snapshot = self.currentBackendProfile()
+            _ = try? await APIService.shared.patchProfile(snapshot)
+        }
+    }
+
+    private var suppressPatchScheduling: Bool = false
+
+    private func withoutPatchScheduling(_ work: () -> Void) {
+        suppressPatchScheduling = true
+        work()
+        suppressPatchScheduling = false
+    }
+
+    func userProfile() -> UserProfile {
+        let macros = macroTargets
+        return UserProfile(
+            dietType: dietType,
+            dailyCalorieTarget: dailyCalorieTarget,
+            proteinTargetG: Double(macros.protein),
+            carbTargetG: Double(macros.carbs),
+            fatTargetG: Double(macros.fat),
+            householdSize: householdSize,
+            bodyweightKg: bodyweightKg,
+            heightCm: heightCm,
+            age: age,
+            biologicalSex: biologicalSex,
+            goal: goal,
+            activityLevel: activityLevel
+        )
+    }
+
+    // MARK: - Derived targets
+
+    var bmr: Int {
+        Int(NutritionMath.bmr(
+            weightKg: bodyweightKg,
+            heightCm: heightCm,
+            age: age,
+            sex: biologicalSex
+        ).rounded())
+    }
+
+    var tdee: Int {
+        Int(NutritionMath.tdee(bmr: Double(bmr), activity: activityLevel).rounded())
+    }
+
+    var dailyCalorieTarget: Int {
+        NutritionMath.calorieTarget(tdee: Double(tdee), goal: goal)
+    }
+
+    var macroTargets: (protein: Int, carbs: Int, fat: Int) {
+        NutritionMath.macroGrams(
+            calories: dailyCalorieTarget,
+            bodyweightKg: bodyweightKg,
+            goal: goal
+        )
+    }
+
+    var waterTargetMl: Int {
+        NutritionMath.waterTargetMl(weightKg: bodyweightKg)
+    }
+
+    // MARK: - Logged meals & consumed totals
 
     private var loggedMeals: [PlannedMeal] {
         plannedMeals.filter(\.isPlanned)
@@ -41,37 +239,55 @@ final class AppState: ObservableObject {
         }
     }
 
-    var consumedCalories: Int {
-        loggedMeals.reduce(0) { $0 + $1.calories }
+    var consumedCalories: Int { loggedMeals.reduce(0) { $0 + $1.calories } }
+    var consumedProtein: Int { loggedMeals.reduce(0) { $0 + $1.protein } }
+    var consumedCarbs: Int { loggedMeals.reduce(0) { $0 + $1.carbs } }
+    var consumedFat: Int { loggedMeals.reduce(0) { $0 + $1.fat } }
+    var remainingCalories: Int { max(dailyCalorieTarget - consumedCalories, 0) }
+
+    // MARK: - Recipes
+
+    var savedRecipes: [Recipe] {
+        recipeLibrary.filter { savedRecipeIDs.contains($0.id) }
     }
 
-    var consumedProtein: Int {
-        loggedMeals.reduce(0) { $0 + $1.protein }
-    }
-
-    var consumedCarbs: Int {
-        loggedMeals.reduce(0) { $0 + $1.carbs }
-    }
-
-    var consumedFat: Int {
-        loggedMeals.reduce(0) { $0 + $1.fat }
-    }
-
-    var remainingCalories: Int {
-        max(dailyCalorieTarget - consumedCalories, 0)
-    }
-
-    var macroTargets: (protein: Int, carbs: Int, fat: Int) {
-        switch dietType {
-        case .highProtein:
-            return (protein: 170, carbs: 180, fat: 65)
-        case .keto:
-            return (protein: 140, carbs: 35, fat: 120)
-        case .vegan:
-            return (protein: 115, carbs: 230, fat: 70)
-        default:
-            return (protein: 150, carbs: 200, fat: 65)
+    func addRecipesToLibrary(_ recipes: [Recipe]) {
+        for recipe in recipes {
+            if let index = recipeLibrary.firstIndex(where: { $0.id == recipe.id }) {
+                recipeLibrary[index] = recipe
+            } else {
+                recipeLibrary.append(recipe)
+            }
         }
+    }
+
+    func isRecipeSaved(_ recipe: Recipe) -> Bool {
+        savedRecipeIDs.contains(recipe.id)
+    }
+
+    func toggleSavedRecipe(_ recipe: Recipe) {
+        addRecipesToLibrary([recipe])
+        if savedRecipeIDs.contains(recipe.id) {
+            savedRecipeIDs.remove(recipe.id)
+        } else {
+            savedRecipeIDs.insert(recipe.id)
+        }
+    }
+
+    func useRecipe(_ recipe: Recipe, for slot: String) {
+        addRecipesToLibrary([recipe])
+        upsertPlannedMeal(
+            slot: slot,
+            recipe: recipe,
+            title: nil,
+            calories: recipe.calories,
+            protein: Int(recipe.macros.proteinG),
+            carbs: Int(recipe.macros.carbsG),
+            fat: Int(recipe.macros.fatG),
+            imageURL: recipe.imageURL,
+            loggedAt: Date()
+        )
+        pendingMealSlot = nil
     }
 
     func requestPlanning(for slot: String) {
@@ -94,22 +310,13 @@ final class AppState: ObservableObject {
         time: Date = Date(),
         imageURL: URL? = nil
     ) {
-        logMeal(
-            name: name,
-            kcal: kcal,
-            protein: protein,
-            carbs: carbs,
-            fat: fat,
-            time: time,
-            imageURL: imageURL
-        )
+        logMeal(name: name, kcal: kcal, protein: protein, carbs: carbs, fat: fat, time: time, imageURL: imageURL)
     }
 
     func removeMeal(id: String) {
         clearSlot(id)
     }
 
-    /// Manually log a meal. Slot is inferred from `time` (Breakfast/Lunch/Dinner).
     func logMeal(
         name: String,
         kcal: Int,
@@ -164,11 +371,109 @@ final class AppState: ObservableObject {
         pendingMealSlot = nil
     }
 
+    // MARK: - Bodyweight log
+
+    /// Latest entry (most recent date).
+    var latestWeightEntry: WeightEntry? {
+        weightLog.max(by: { $0.date < $1.date })
+    }
+
+    /// Last 14 days of logged weights, sorted oldest → newest.
+    var recentWeightLog: [WeightEntry] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -13, to: Date()) ?? Date()
+        return weightLog
+            .filter { $0.date >= Calendar.current.startOfDay(for: cutoff) }
+            .sorted { $0.date < $1.date }
+    }
+
+    /// Difference (kg) between newest and 7-day prior weight, when available.
+    var weightDelta7d: Double? {
+        let sorted = weightLog.sorted { $0.date < $1.date }
+        guard let latest = sorted.last else { return nil }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: latest.date) ?? latest.date
+        let priorEntries = sorted.filter { $0.date <= cutoff }
+        guard let prior = priorEntries.last else { return nil }
+        return latest.weightKg - prior.weightKg
+    }
+
+    func logWeight(_ kg: Double, on date: Date = Date()) {
+        let entry = WeightEntry(date: Calendar.current.startOfDay(for: date), weightKg: kg)
+        weightLog.removeAll { $0.dateKey == entry.dateKey }
+        weightLog.append(entry)
+        weightLog.sort { $0.date < $1.date }
+        bodyweightKg = kg
+    }
+
+    func ingestHealthKitWeight(_ kg: Double, sampleDate: Date) {
+        // Only update bodyweight from HealthKit if it's the most recent reading we have.
+        if let latest = latestWeightEntry, latest.date >= sampleDate { return }
+        logWeight(kg, on: sampleDate)
+    }
+
+    // MARK: - Water
+
+    private func waterDateKey(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    var waterTodayMl: Int {
+        waterByDate[waterDateKey(Date())] ?? 0
+    }
+
+    func addWater(ml: Int, on date: Date = Date()) {
+        let key = waterDateKey(date)
+        waterByDate[key] = max((waterByDate[key] ?? 0) + ml, 0)
+    }
+
+    func resetWaterToday() {
+        waterByDate[waterDateKey(Date())] = 0
+    }
+
+    // MARK: - HealthKit hooks (set by HealthKitService)
+
+    func updateLastWorkout(_ date: Date?) {
+        lastWorkoutEndedAt = date
+    }
+
+    func updateActiveEnergy(_ kcal: Int) {
+        todayActiveEnergyKcal = kcal
+    }
+
+    /// True if a workout finished within the last 90 minutes.
+    var isPostWorkoutWindow: Bool {
+        guard let end = lastWorkoutEndedAt else { return false }
+        return Date().timeIntervalSince(end) < 90 * 60
+    }
+
+    // MARK: - Mock seed
+
     private func loadMock() {
         let calendar = Calendar.current
         let now = Date()
         let breakfast = calendar.date(bySettingHour: 8, minute: 10, second: 0, of: now) ?? now
         let lunch = calendar.date(bySettingHour: 12, minute: 35, second: 0, of: now) ?? now
+        recipeLibrary = MockData.recipes
+
+        if let storedRecipeIDs = UserDefaults.standard.array(forKey: Self.savedRecipeIDsKey) as? [String] {
+            savedRecipeIDs = Set(storedRecipeIDs)
+        } else if let starterRecipe = MockData.recipes.first {
+            savedRecipeIDs = [starterRecipe.id]
+        }
+
+        if weightLog.isEmpty {
+            // Seed a small history so the trend chart has something to show on first launch.
+            weightLog = (0..<7).map { offset in
+                let date = calendar.date(byAdding: .day, value: -offset, to: now) ?? now
+                let drift = Double.random(in: -0.4...0.4)
+                return WeightEntry(
+                    date: calendar.startOfDay(for: date),
+                    weightKg: bodyweightKg + drift
+                )
+            }
+            .sorted { $0.date < $1.date }
+        }
 
         plannedMeals = [
             PlannedMeal(
@@ -233,8 +538,12 @@ final class AppState: ObservableObject {
 
     private func planningBrief(for slot: String) -> String {
         let people = householdSize == 1 ? "one person" : "\(householdSize) people"
+        let macros = macroTargets
         let remaining = max(remainingCalories, 450)
-        return "Plan \(slot.lowercased()) for \(people), \(dietType.rawValue.lowercased()), around \(remaining) calories, with enough protein."
+        let postWorkout = isPostWorkoutWindow
+            ? " I just finished a workout, so prioritise fast carbs and around 40g protein."
+            : ""
+        return "Plan \(slot.lowercased()) for \(people), \(goal.label.lowercased()) phase, \(dietType.rawValue.lowercased()), around \(remaining) calories with at least \(min(macros.protein / 3, 45))g protein.\(postWorkout)"
     }
 
     private func slot(for time: Date) -> String {
@@ -273,4 +582,13 @@ final class AppState: ObservableObject {
             plannedMeals.append(updated)
         }
     }
+}
+
+private struct BodyStatsSnapshot: Codable {
+    var bodyweightKg: Double
+    var heightCm: Double
+    var age: Int
+    var biologicalSex: BiologicalSex
+    var goal: NutritionGoal
+    var activityLevel: ActivityLevel
 }

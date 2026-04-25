@@ -13,13 +13,17 @@ struct ContentView: View {
                 .tabItem { Label("Plan",    systemImage: "sparkles") }
                 .tag(1)
 
+            RecipeLibraryView()
+                .tabItem { Label("Recipes", systemImage: "bookmark.fill") }
+                .tag(2)
+
             NutritionTrackerView()
                 .tabItem { Label("Track",   systemImage: "chart.bar.fill") }
-                .tag(2)
+                .tag(3)
 
             ProfileView()
                 .tabItem { Label("Profile", systemImage: "person.fill") }
-                .tag(3)
+                .tag(4)
         }
         .tint(AppTheme.primary)
         .toolbarBackground(.visible, for: .tabBar)

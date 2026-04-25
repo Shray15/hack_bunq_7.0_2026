@@ -78,6 +78,15 @@ struct ChatView: View {
         .onChange(of: appState.planningPrefill) {
             submitPendingPlanningBrief()
         }
+        .onChange(of: vm.messages.count) {
+            // Mirror any AI-suggested recipes into the saved library so the user
+            // can find them under the Recipes tab later.
+            for message in vm.messages.suffix(2) {
+                if let recipes = message.recipes {
+                    appState.addRecipesToLibrary(recipes)
+                }
+            }
+        }
         .onChange(of: speech.isRecording, initial: false) { wasRecording, isRecording in
             guard wasRecording, !isRecording, shouldSubmitRecordedTranscript else { return }
             shouldSubmitRecordedTranscript = false
@@ -107,12 +116,7 @@ struct ChatView: View {
                         .id(msg.id)
                     }
 
-                    if !vm.streamingText.isEmpty {
-                        assistantBubble(text: vm.streamingText)
-                            .id("streaming")
-                    }
-
-                    if vm.isLoading && vm.streamingText.isEmpty {
+                    if vm.isLoading {
                         TypingIndicator()
                             .id("typing")
                     }
@@ -134,9 +138,11 @@ struct ChatView: View {
                     }
                 }
             }
-            .onChange(of: vm.streamingText) {
-                withAnimation(.easeOut(duration: 0.18)) {
-                    proxy.scrollTo("streaming", anchor: .bottom)
+            .onChange(of: vm.isLoading) { _, loading in
+                if loading {
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        proxy.scrollTo("typing", anchor: .bottom)
+                    }
                 }
             }
         }
@@ -376,7 +382,7 @@ struct ChatView: View {
             stripView(
                 icon: "sparkles",
                 tint: AppTheme.primary,
-                title: vm.streamingText.isEmpty ? "Planner is thinking…" : "Streaming response…",
+                title: "Planner is thinking…",
                 action: nil
             )
         }
@@ -461,7 +467,7 @@ struct ChatView: View {
         isInputFocused = false
         inputText = ""
         recordingErrorMessage = nil
-        vm.send(trimmed, profile: appState.userProfile())
+        vm.send(trimmed)
     }
 
     private func submitPendingPlanningBrief() {
@@ -477,31 +483,31 @@ struct EmptyPromptView: View {
 
     private let suggestions: [PromptSuggestion] = [
         .init(
-            title: "High-protein reset",
-            detail: "Dinner under 600 cal",
-            prompt: "High-protein dinner under 600 calories",
+            title: "Post-workout",
+            detail: "35g+ protein",
+            prompt: "Post-workout meal with at least 35 grams of protein",
             icon: "bolt.fill",
             tint: AppTheme.primary
         ),
         .init(
-            title: "Keto lunch",
-            detail: "Fast and solo",
-            prompt: "Quick keto lunch for one",
-            icon: "leaf.fill",
+            title: "Cut-friendly",
+            detail: "Dinner under 550 kcal",
+            prompt: "Cut-friendly dinner under 550 calories with vegetables",
+            icon: "flame.fill",
             tint: AppTheme.accent
         ),
         .init(
-            title: "Family dinner",
-            detail: "Chicken for four",
-            prompt: "Dinner for four with chicken",
-            icon: "person.3.fill",
+            title: "Meal prep",
+            detail: "3 training lunches",
+            prompt: "Three high-protein lunch prep recipes for training days",
+            icon: "calendar",
             tint: AppTheme.primaryDeep
         ),
         .init(
-            title: "Date night",
-            detail: "Something impressive",
-            prompt: "Something impressive for Saturday night",
-            icon: "sparkles",
+            title: "Vegetarian protein",
+            detail: "High-fiber dinner",
+            prompt: "Vegetarian high-protein dinner with beans or tofu",
+            icon: "leaf.fill",
             tint: AppTheme.accent
         )
     ]
@@ -518,7 +524,7 @@ struct EmptyPromptView: View {
                     .font(.title2.weight(.bold))
                     .foregroundStyle(AppTheme.text)
 
-                Text("Speak or type a brief — people, timing, diet, calories. We turn it into recipes you can checkout.")
+                Text("Speak or type people, timing, diet, calories, and training goal. We turn it into recipes you can checkout.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
             }

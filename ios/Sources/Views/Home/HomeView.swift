@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @Binding var selectedTab: Int
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var health: HealthKitService
     @State private var selectedRecipe: Recipe?
     @State private var showDeliveryDetails = false
 
@@ -16,6 +17,12 @@ struct HomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         heroCard
+
+                        if appState.isPostWorkoutWindow, let endedAt = appState.lastWorkoutEndedAt {
+                            PostWorkoutBanner(endedAt: endedAt) {
+                                selectedTab = 1
+                            }
+                        }
 
                         if let delivery = appState.upcomingDelivery {
                             DeliveryBanner(eta: delivery) {
@@ -83,7 +90,7 @@ struct HomeView: View {
                     Spacer(minLength: 0)
 
                     Button {
-                        selectedTab = 3
+                        selectedTab = 4
                     } label: {
                         ZStack {
                             Circle()
@@ -150,7 +157,7 @@ struct HomeView: View {
         if let recipe = meal.recipe {
             selectedRecipe = recipe
         } else if meal.isPlanned {
-            selectedTab = 2
+            selectedTab = 3
         } else {
             appState.requestPlanning(for: meal.slot)
             selectedTab = 1
@@ -203,6 +210,51 @@ struct CalorieProgressCard: View {
 }
 
 // MARK: - Delivery banner
+
+// MARK: - Post-workout banner
+
+struct PostWorkoutBanner: View {
+    let endedAt: Date
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            AppCard(padding: 14, background: Color(red: 0.94, green: 0.91, blue: 0.98)) {
+                HStack(spacing: 14) {
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.purple)
+                        .frame(width: 38, height: 38)
+                        .background(Color.purple.opacity(0.14))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Post-workout window")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.text)
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .lineLimit(2)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Post-workout window. Tap to plan a high-protein meal.")
+    }
+
+    private var subtitle: String {
+        let minutes = max(Int(Date().timeIntervalSince(endedAt) / 60), 0)
+        return "Workout finished \(minutes) min ago — let's plan a 40g protein meal."
+    }
+}
 
 struct DeliveryBanner: View {
     let eta: Date
