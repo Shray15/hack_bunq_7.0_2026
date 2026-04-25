@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     gemini_timeout_seconds: float = 8.0
     chat_rate_limit_per_minute: int = 5
 
+    # grocery-mcp connection (Phase 3). Required in production. Tests/local dev
+    # set `grocery_mcp_stub=true` to skip the connection entirely.
+    grocery_mcp_url: str = ""
+    grocery_mcp_stub: bool = False
+    grocery_mcp_connect_timeout_seconds: float = 10.0
+    grocery_mcp_call_timeout_seconds: float = 10.0
+    bunq_poll_interval_seconds: float = 2.0
+    bunq_poll_max_seconds: float = 300.0
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"

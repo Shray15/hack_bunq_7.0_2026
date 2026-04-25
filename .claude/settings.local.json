@@ -17,7 +17,13 @@
       "Bash(uv lock *)",
       "Bash(uv sync *)",
       "Bash(uv run *)",
-      "Bash(docker info *)"
+      "Bash(docker info *)",
+      "Bash(pg_isready -h localhost -p 5432)",
+      "Bash(brew services *)",
+      "Bash(docker run *)",
+      "Bash(docker exec *)",
+      "Bash(docker stop *)",
+      "Bash(docker rm *)"
     ]
   }
 }
