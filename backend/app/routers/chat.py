@@ -40,7 +40,11 @@ async def _run_canned_chat(user_id: uuid.UUID, chat_id: uuid.UUID) -> None:
     await hub.publish(
         user_id,
         EventName.RECIPE_COMPLETE,
-        {"chat_id": str(chat_id), "recipe_id": str(recipe.id), "recipe": recipe.model_dump(mode="json")},
+        {
+            "chat_id": str(chat_id),
+            "recipe_id": str(recipe.id),
+            "recipe": recipe.model_dump(mode="json"),
+        },
     )
 
     await asyncio.sleep(2.0)

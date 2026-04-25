@@ -20,7 +20,9 @@ from app.schemas import (
     RecipeIngredient,
     StoreComparison,
 )
+from app.schemas.cart import Store
 from app.schemas.common import Macros
+from app.schemas.order import OrderStatus
 
 
 def _now() -> datetime:
@@ -113,19 +115,19 @@ def make_cart(*, recipe_id: uuid.UUID, cart_id: uuid.UUID | None = None) -> Cart
 def make_order(
     *,
     cart_id: uuid.UUID,
-    store: str = "ah",
+    store: Store = "ah",
     order_id: uuid.UUID | None = None,
-    status: str = "ready_to_pay",
+    status: OrderStatus = "ready_to_pay",
 ) -> Order:
     oid = order_id or uuid.uuid4()
     return Order(
         id=oid,
         cart_id=cart_id,
-        store=store,  # type: ignore[arg-type]
+        store=store,
         total_eur=12.83,
         bunq_payment_url=f"https://bunq.test/payment/{oid}",
         bunq_request_id=f"req-{oid.hex[:12]}",
-        status=status,  # type: ignore[arg-type]
+        status=status,
         paid_at=None,
         fulfilled_at=None,
         created_at=_now(),

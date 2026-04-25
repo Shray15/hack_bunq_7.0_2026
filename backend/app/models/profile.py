@@ -34,4 +34,4 @@ class Profile(Base):
     )
     extra: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
-    user: Mapped["User"] = relationship(back_populates="profile")
+    user: Mapped[User] = relationship(back_populates="profile")
