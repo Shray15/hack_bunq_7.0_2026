@@ -196,14 +196,18 @@ struct ProfileView: View {
                     .foregroundStyle(AppTheme.text)
 
                 HStack(spacing: 10) {
-                    statField(
-                        icon: "scalemass.fill",
-                        tint: AppTheme.accent,
-                        title: "Weight",
-                        unit: "kg",
-                        text: $weightText,
-                        field: .weight
-                    )
+                    if isWeightFromHealth {
+                        healthLockedWeightField
+                    } else {
+                        statField(
+                            icon: "scalemass.fill",
+                            tint: AppTheme.accent,
+                            title: "Weight",
+                            unit: "kg",
+                            text: $weightText,
+                            field: .weight
+                        )
+                    }
                     statField(
                         icon: "ruler.fill",
                         tint: .blue,
@@ -239,6 +243,54 @@ struct ProfileView: View {
                 )
             }
         }
+    }
+
+    /// Apple Health, when connected and reporting a weight, is the source of
+    /// truth — the user shouldn't be editing two separate values.
+    private var isWeightFromHealth: Bool {
+        health.isAuthorized && health.latestWeightKg != nil
+    }
+
+    private var healthLockedWeightField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "scalemass.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 26, height: 26)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(Circle())
+                Text("Weight")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(formatKg(appState.bodyweightKg))
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.text)
+                    .monospacedDigit()
+                Text("kg")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.secondaryText)
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 4) {
+                Image(systemName: "heart.fill")
+                    .font(.caption2.weight(.bold))
+                Text("Apple Health")
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.5)
+            }
+            .foregroundStyle(.pink)
+        }
+        .padding(12)
+        .background(AppTheme.mutedCard.opacity(0.7))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Weight \(formatKg(appState.bodyweightKg)) kilograms, sourced from Apple Health")
     }
 
     private func statField(
@@ -445,13 +497,10 @@ struct ProfileView: View {
                     }
 
                     if health.isAuthorized {
+                        // Weight is shown in the Body Stats card above (now
+                        // pinned to Apple Health), so we don't duplicate it
+                        // here. Active energy + last workout are HK-only.
                         VStack(alignment: .leading, spacing: 8) {
-                            HKStat(
-                                icon: "scalemass.fill",
-                                tint: AppTheme.accent,
-                                title: "Latest weight",
-                                value: health.latestWeightKg.map { "\(formatKg($0)) kg" } ?? "—"
-                            )
                             HKStat(
                                 icon: "flame.fill",
                                 tint: AppTheme.primary,

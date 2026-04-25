@@ -451,8 +451,9 @@ final class AppState: ObservableObject {
     }
 
     func ingestHealthKitWeight(_ kg: Double, sampleDate: Date) {
-        // Only update bodyweight from HealthKit if it's the most recent reading we have.
-        if let latest = latestWeightEntry, latest.date >= sampleDate { return }
+        // Apple Health is treated as authoritative: the user can't edit weight
+        // in the Body Stats card while HK is connected, so any HK reading
+        // overwrites the local value (no date check needed).
         logWeight(kg, on: sampleDate)
     }
 
