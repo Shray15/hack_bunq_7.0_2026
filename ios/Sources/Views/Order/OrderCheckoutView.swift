@@ -1,91 +1,24 @@
 import UIKit
 import SwiftUI
 
-@MainActor
-final class OrderViewModel: ObservableObject {
-    @Published var paymentURL: URL?
-    @Published var orderId: String?
-    @Published var isOrdering: Bool = false
-    @Published var isPaid: Bool = false
-    @Published var errorMsg: String?
-
-    private let api = APIService.shared
-    private let realtime = RealtimeService.shared
-    private var listenerTask: Task<Void, Never>?
-
-    /// `POST /order/checkout` — mints the bunq.me URL and starts watching for the
-    /// matching `order_status: paid` SSE event.
-    func checkout(cartId: String) async {
-        isOrdering = true
-        errorMsg = nil
-        defer { isOrdering = false }
-        do {
-            let response = try await api.checkout(cartId: cartId)
-            paymentURL = URL(string: response.paymentURL)
-            orderId = response.orderId
-            startWaitingForPayment()
-        } catch {
-            errorMsg = error.localizedDescription
-        }
-    }
-
-    /// User backed out of the bunq flow before the webhook fired.
-    func cancel() {
-        listenerTask?.cancel()
-        listenerTask = nil
-        paymentURL = nil
-        orderId = nil
-        isPaid = false
-    }
-
-    /// User says they paid but the SSE event hasn't arrived (e.g. simulator,
-    /// flaky webhook). Treat as paid so the demo doesn't stall.
-    func markPaidManually() {
-        isPaid = true
-        listenerTask?.cancel()
-        listenerTask = nil
-    }
-
-    private func startWaitingForPayment() {
-        listenerTask?.cancel()
-        let stream = realtime.subscribe()
-        listenerTask = Task { [weak self] in
-            for await event in stream {
-                guard let self else { return }
-                guard case .orderStatus(let payload) = event else { continue }
-                guard payload.orderId == self.orderId else { continue }
-                if payload.status == "paid" {
-                    self.isPaid = true
-                    return
-                }
-            }
-        }
-    }
-}
-
+/// First step of checkout: the user reviews the basket the backend matched
+/// for the chosen store, skips anything they already have at home, and taps
+/// "Add to cart" to advance to the bunq pay screen.
 struct OrderCheckoutView: View {
     let recipe: Recipe
     let servings: Int
     let cart: CartItemsResponse
     let onClose: () -> Void
 
-    @EnvironmentObject private var appState: AppState
-    @StateObject private var vm = OrderViewModel()
     @State private var excludedItemIDs: Set<String> = []
-    @State private var showError = false
-    @Environment(\.dismiss) private var dismiss
+    @State private var navigateToReview = false
 
     var body: some View {
         ZStack {
             AppBackground()
             cartContent
-
-            if shouldShowOverlay {
-                paymentOverlay
-                    .transition(.opacity)
-            }
         }
-        .navigationTitle("Checkout")
+        .navigationTitle("Your basket")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -93,35 +26,20 @@ struct OrderCheckoutView: View {
                     .font(.subheadline.weight(.semibold))
             }
         }
-        .onChange(of: vm.paymentURL) { _, url in
-            if let url {
-                UIApplication.shared.open(url)
-            }
+        .navigationDestination(isPresented: $navigateToReview) {
+            OrderReviewView(
+                recipe: recipe,
+                servings: servings,
+                cartId: cart.cartId,
+                items: filteredItems,
+                totalEur: filteredTotal,
+                store: cart.selectedStore,
+                onClose: onClose
+            )
         }
-        .onChange(of: vm.errorMsg) { _, value in
-            showError = value != nil
-        }
-        .onChange(of: vm.isPaid) { _, paid in
-            guard paid else { return }
-            appState.completeOrder(recipe: recipe, servings: servings)
-            Task {
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                onClose()
-            }
-        }
-        .alert("Something went wrong", isPresented: $showError) {
-            Button("OK") { vm.errorMsg = nil }
-        } message: {
-            Text(vm.errorMsg ?? "")
-        }
-        .animation(.easeOut(duration: 0.18), value: shouldShowOverlay)
     }
 
-    private var shouldShowOverlay: Bool {
-        vm.isOrdering || vm.paymentURL != nil || vm.isPaid
-    }
-
-    // MARK: - Cart content
+    // MARK: - Content
 
     private var cartContent: some View {
         ScrollView {
@@ -133,7 +51,7 @@ struct OrderCheckoutView: View {
             .appScrollContentPadding()
         }
         .safeAreaInset(edge: .bottom) {
-            payButton
+            addToCartButton
         }
     }
 
@@ -167,10 +85,9 @@ struct OrderCheckoutView: View {
                 ForEach(cart.items) { item in
                     BasketRow(
                         item: item,
-                        isIncluded: !excludedItemIDs.contains(item.id)
-                    ) {
-                        toggle(item.id)
-                    }
+                        isIncluded: !excludedItemIDs.contains(item.id),
+                        onToggle: { toggle(item.id) }
+                    )
 
                     if item.id != cart.items.last?.id {
                         Divider()
@@ -184,7 +101,7 @@ struct OrderCheckoutView: View {
         AppCard(background: AppTheme.mutedCard) {
             VStack(spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Total")
+                    Text("Subtotal")
                         .font(.headline)
                         .foregroundStyle(AppTheme.text)
                     Spacer()
@@ -202,9 +119,9 @@ struct OrderCheckoutView: View {
                 }
 
                 HStack {
-                    AppTag("Pay via bunq", color: AppTheme.success, icon: "creditcard.fill")
+                    AppTag("Add to cart", color: AppTheme.primary, icon: "cart.fill")
                     Spacer()
-                    Text("bunq.me opens after checkout")
+                    Text("Pay on the next step")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(AppTheme.secondaryText)
                 }
@@ -212,129 +129,35 @@ struct OrderCheckoutView: View {
         }
     }
 
-    private var payButton: some View {
+    private var addToCartButton: some View {
         Button {
-            Task { await vm.checkout(cartId: cart.cartId) }
+            navigateToReview = true
         } label: {
             Group {
-                if vm.isOrdering {
-                    ProgressView()
-                        .tint(.white)
-                        .frame(maxWidth: .infinity)
-                } else if !hasIncludedItems {
+                if !hasIncludedItems {
                     Label("Add an item to checkout", systemImage: "cart.badge.minus")
                 } else {
-                    Label("Pay €\(filteredTotal, specifier: "%.2f") via bunq", systemImage: "creditcard.fill")
+                    Label("Add to cart (€\(filteredTotal, specifier: "%.2f"))", systemImage: "cart.fill")
                 }
             }
         }
-        .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.success))
+        .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.primary))
         .padding(.horizontal, 20)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .background(.ultraThinMaterial)
-        .disabled(vm.isOrdering || !hasIncludedItems)
-    }
-
-    // MARK: - Payment overlay
-
-    private var paymentOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.32)
-                .ignoresSafeArea()
-                .onTapGesture { /* swallow */ }
-
-            AppCard {
-                VStack(spacing: 16) {
-                    if vm.isPaid {
-                        paidContent
-                    } else {
-                        waitingContent
-                    }
-                }
-                .padding(.vertical, 6)
-            }
-            .padding(.horizontal, 32)
-        }
-    }
-
-    private var waitingContent: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.success.opacity(0.14))
-                    .frame(width: 70, height: 70)
-                Image(systemName: "creditcard.fill")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(AppTheme.success)
-            }
-
-            Text("Confirm in bunq")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(AppTheme.text)
-            Text("We'll mark this paid the moment bunq confirms — usually a few seconds.")
-                .font(.caption)
-                .foregroundStyle(AppTheme.secondaryText)
-                .multilineTextAlignment(.center)
-
-            ProgressView()
-                .padding(.top, 4)
-
-            VStack(spacing: 8) {
-                Button {
-                    if let url = vm.paymentURL {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    Label("Reopen bunq", systemImage: "arrow.up.right.square")
-                }
-                .buttonStyle(AppPrimaryButtonStyle(color: AppTheme.success))
-                .disabled(vm.paymentURL == nil)
-
-                Button("I already paid") {
-                    vm.markPaidManually()
-                }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppTheme.primary)
-
-                Button("Cancel order") {
-                    vm.cancel()
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.secondaryText)
-            }
-        }
-    }
-
-    private var paidContent: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.success.opacity(0.18))
-                    .frame(width: 86, height: 86)
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56, weight: .bold))
-                    .foregroundStyle(AppTheme.success)
-            }
-
-            Text("Paid!")
-                .font(.title.weight(.bold))
-                .foregroundStyle(AppTheme.text)
-            Text("\(recipe.name) is locked into your day. Delivery is on its way.")
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.secondaryText)
-                .multilineTextAlignment(.center)
-        }
+        .disabled(!hasIncludedItems)
     }
 
     // MARK: - Helpers
 
     private var hasExclusions: Bool { !excludedItemIDs.isEmpty }
     private var hasIncludedItems: Bool { cart.items.contains { !excludedItemIDs.contains($0.id) } }
+    private var filteredItems: [CartItem] {
+        cart.items.filter { !excludedItemIDs.contains($0.id) }
+    }
     private var filteredTotal: Double {
-        cart.items
-            .filter { !excludedItemIDs.contains($0.id) }
-            .reduce(0) { $0 + $1.priceEur }
+        filteredItems.reduce(0) { $0 + $1.priceEur }
     }
     private var itemCountLabel: String {
         let total = cart.items.count
@@ -354,15 +177,19 @@ struct OrderCheckoutView: View {
     }
 }
 
-// MARK: - Basket row
+// MARK: - Basket row (shared with OrderReviewView)
 
-private struct BasketRow: View {
+/// Single row in either the basket-edit screen or the review screen.
+/// Pass `onToggle = nil` for the read-only review case.
+struct BasketRow: View {
     let item: CartItem
     let isIncluded: Bool
-    let onToggle: () -> Void
+    let onToggle: (() -> Void)?
 
     var body: some View {
-        Button(action: onToggle) {
+        Button {
+            onToggle?()
+        } label: {
             HStack(alignment: .center, spacing: 12) {
                 ZStack(alignment: .topTrailing) {
                     RemoteImageView(url: item.imageURL, cornerRadius: 14) {
@@ -376,11 +203,13 @@ private struct BasketRow: View {
                     .frame(width: 56, height: 56)
                     .grayscale(isIncluded ? 0 : 0.85)
 
-                    Image(systemName: isIncluded ? "checkmark.circle.fill" : "minus.circle.fill")
-                        .font(.footnote.weight(.bold))
-                        .foregroundStyle(isIncluded ? AppTheme.primary : AppTheme.secondaryText.opacity(0.7))
-                        .background(Circle().fill(.white).frame(width: 18, height: 18))
-                        .offset(x: 5, y: -5)
+                    if onToggle != nil {
+                        Image(systemName: isIncluded ? "checkmark.circle.fill" : "minus.circle.fill")
+                            .font(.footnote.weight(.bold))
+                            .foregroundStyle(isIncluded ? AppTheme.primary : AppTheme.secondaryText.opacity(0.7))
+                            .background(Circle().fill(.white).frame(width: 18, height: 18))
+                            .offset(x: 5, y: -5)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -414,8 +243,9 @@ private struct BasketRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(onToggle == nil)
         .accessibilityLabel("\(item.productName), €\(item.priceEur, specifier: "%.2f")")
-        .accessibilityHint(isIncluded ? "Tap to skip this item" : "Tap to add this item back")
+        .accessibilityHint(onToggle == nil ? "" : (isIncluded ? "Tap to skip this item" : "Tap to add this item back"))
         .accessibilityAddTraits(isIncluded ? [] : [.isSelected])
     }
 
