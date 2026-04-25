@@ -21,17 +21,13 @@ struct RecipeDetailView: View {
                             VStack(alignment: .leading, spacing: 16) {
                                 AppSectionHeader("Ingredients", detail: "Scaled live for the number of people you are cooking for.")
 
-                                HStack {
+                                HStack(spacing: 12) {
                                     Text("Servings")
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
+                                        .foregroundStyle(AppTheme.text)
                                     Spacer()
-                                    Stepper("\(servings)", value: $servings, in: 1...12)
-                                        .labelsHidden()
-                                    Text("\(servings)")
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(AppTheme.primaryDeep)
-                                        .frame(minWidth: 24)
+                                    ServingsStepper(value: $servings, range: 1...12)
                                 }
 
                                 ForEach(recipe.ingredients) { item in
@@ -124,8 +120,12 @@ struct RecipeDetailView: View {
             .frame(height: 320)
             .overlay {
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.52)],
-                    startPoint: .center,
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black.opacity(0.18), location: 0.45),
+                        .init(color: .black.opacity(0.68), location: 1.0)
+                    ],
+                    startPoint: .top,
                     endPoint: .bottom
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -133,9 +133,9 @@ struct RecipeDetailView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
-                    AppTag("Ready to cook", color: .white, icon: "sparkles")
+                    HeroTag(label: "Ready to cook", icon: "sparkles")
                     if recipe.macros.carbsG < 20 {
-                        AppTag("Low carb", color: .white, icon: "leaf.fill")
+                        HeroTag(label: "Low carb", icon: "leaf.fill")
                     }
                 }
 
@@ -144,10 +144,12 @@ struct RecipeDetailView: View {
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .lineLimit(2)
+                    .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
 
                 Text("Balanced for speed, macros, and a clean grocery handoff into checkout.")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.82))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
             }
             .padding(22)
         }
@@ -200,5 +202,75 @@ struct StatBadge: View {
         .padding(.vertical, 14)
         .background(AppTheme.mutedCard.opacity(0.85))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+}
+
+private struct HeroTag: View {
+    let label: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.bold))
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.black.opacity(0.45))
+        .overlay {
+            Capsule()
+                .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
+        }
+        .clipShape(Capsule())
+    }
+}
+
+private struct ServingsStepper: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+
+    var body: some View {
+        HStack(spacing: 0) {
+            stepperButton(systemImage: "minus", enabled: value > range.lowerBound) {
+                if value > range.lowerBound { value -= 1 }
+            }
+            .accessibilityLabel("Decrease servings")
+
+            Text("\(value)")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.text)
+                .monospacedDigit()
+                .frame(minWidth: 28)
+
+            stepperButton(systemImage: "plus", enabled: value < range.upperBound) {
+                if value < range.upperBound { value += 1 }
+            }
+            .accessibilityLabel("Increase servings")
+        }
+        .padding(.horizontal, 4)
+        .background(AppTheme.mutedCard)
+        .overlay {
+            Capsule()
+                .stroke(AppTheme.stroke, lineWidth: 1)
+        }
+        .clipShape(Capsule())
+        .accessibilityElement(children: .contain)
+        .accessibilityValue("\(value) servings")
+    }
+
+    private func stepperButton(systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(enabled ? AppTheme.primary : AppTheme.secondaryText.opacity(0.5))
+                .frame(width: 34, height: 34)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 }
