@@ -21,8 +21,7 @@ class OrderViewModel: ObservableObject {
         isLoading = false
     }
 
-    func checkout() async {
-        guard let cart else { return }
+    func checkout(cart: CartResponse) async {
         isOrdering = true
         do {
             let response = try await api.checkout(cart: cart)
@@ -41,6 +40,7 @@ struct OrderCheckoutView: View {
     @StateObject private var vm = OrderViewModel()
     @State private var deliveryIndex = 0
     @State private var showError = false
+    @State private var excludedItemIDs: Set<String> = []
     @Environment(\.dismiss) private var dismiss
 
     private let deliveryOptions = ["Today", "Tomorrow", "Pick a date"]
@@ -118,7 +118,7 @@ struct OrderCheckoutView: View {
                         HStack {
                             AppTag(storeLabel(for: cart.store), color: AppTheme.success, icon: "cart.fill")
                             Spacer()
-                            Text("\(cart.items.count) items")
+                            Text(itemCountLabel(cart))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
@@ -136,34 +136,14 @@ struct OrderCheckoutView: View {
 
                 AppCard {
                     VStack(alignment: .leading, spacing: 16) {
-                        AppSectionHeader("Basket", detail: "Mapped from the recipe ingredients into actual store products.")
+                        AppSectionHeader("Basket", detail: "Tap an item to skip it if you already have it at home.")
 
                         ForEach(cart.items) { item in
-                            HStack(alignment: .top, spacing: 12) {
-                                Circle()
-                                    .fill(AppTheme.primary.opacity(0.14))
-                                    .frame(width: 10, height: 10)
-                                    .padding(.top, 7)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.productName)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(AppTheme.text)
-                                    Text(item.ingredient.capitalized)
-                                        .font(.caption)
-                                        .foregroundStyle(AppTheme.secondaryText)
-                                }
-
-                                Spacer()
-
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    Text("€\(item.priceEur, specifier: "%.2f")")
-                                        .font(.subheadline.weight(.bold))
-                                        .foregroundStyle(AppTheme.text)
-                                    Text("Qty \(item.qty)")
-                                        .font(.caption)
-                                        .foregroundStyle(AppTheme.secondaryText)
-                                }
+                            BasketRow(
+                                item: item,
+                                isIncluded: !excludedItemIDs.contains(item.id)
+                            ) {
+                                toggle(item.id)
                             }
 
                             if item.id != cart.items.last?.id {
@@ -198,15 +178,23 @@ struct OrderCheckoutView: View {
 
                 AppCard(background: AppTheme.mutedCard) {
                     VStack(spacing: 14) {
-                        HStack {
+                        HStack(alignment: .firstTextBaseline) {
                             Text("Total")
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.text)
                             Spacer()
-                            Text("€\(cart.totalEur, specifier: "%.2f")")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(AppTheme.primaryDeep)
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("€\(filteredTotal(cart), specifier: "%.2f")")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(AppTheme.primaryDeep)
+                                if hasExclusions {
+                                    Text("€\(cart.totalEur, specifier: "%.2f") before skips")
+                                        .font(.caption2)
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                        .strikethrough(true, color: AppTheme.secondaryText)
+                                }
+                            }
                         }
 
                         HStack {
@@ -223,15 +211,20 @@ struct OrderCheckoutView: View {
         }
         .safeAreaInset(edge: .bottom) {
             Button {
-                Task { await vm.checkout() }
+                Task { await vm.checkout(cart: filteredCart(cart)) }
             } label: {
                 Group {
                     if vm.isOrdering {
                         ProgressView()
                             .tint(.white)
                             .frame(maxWidth: .infinity)
+                    } else if hasIncludedItems(cart) {
+                        Label(
+                            "Pay €\(filteredTotal(cart), specifier: "%.2f") via bunq",
+                            systemImage: "creditcard.fill"
+                        )
                     } else {
-                        Label("Pay €\(cart.totalEur, specifier: "%.2f") via bunq", systemImage: "creditcard.fill")
+                        Label("Add an item to checkout", systemImage: "cart.badge.minus")
                     }
                 }
             }
@@ -240,8 +233,46 @@ struct OrderCheckoutView: View {
             .padding(.top, 10)
             .padding(.bottom, 8)
             .background(.ultraThinMaterial)
-            .disabled(vm.isOrdering)
+            .disabled(vm.isOrdering || !hasIncludedItems(cart))
         }
+    }
+
+    private func toggle(_ id: String) {
+        if excludedItemIDs.contains(id) {
+            excludedItemIDs.remove(id)
+        } else {
+            excludedItemIDs.insert(id)
+        }
+    }
+
+    private var hasExclusions: Bool {
+        !excludedItemIDs.isEmpty
+    }
+
+    private func hasIncludedItems(_ cart: CartResponse) -> Bool {
+        cart.items.contains { !excludedItemIDs.contains($0.id) }
+    }
+
+    private func filteredItems(_ cart: CartResponse) -> [CartItem] {
+        cart.items.filter { !excludedItemIDs.contains($0.id) }
+    }
+
+    private func filteredTotal(_ cart: CartResponse) -> Double {
+        filteredItems(cart).reduce(0) { $0 + $1.priceEur }
+    }
+
+    private func filteredCart(_ cart: CartResponse) -> CartResponse {
+        let items = filteredItems(cart)
+        let total = items.reduce(0) { $0 + $1.priceEur }
+        return CartResponse(items: items, totalEur: total, store: cart.store)
+    }
+
+    private func itemCountLabel(_ cart: CartResponse) -> String {
+        let included = cart.items.count - excludedItemIDs.intersection(cart.items.map(\.id)).count
+        if included == cart.items.count {
+            return "\(cart.items.count) items"
+        }
+        return "\(included) of \(cart.items.count) items"
     }
 
     private func storeLabel(for store: String) -> String {
@@ -251,5 +282,53 @@ struct OrderCheckoutView: View {
         default:
             return store.uppercased()
         }
+    }
+}
+
+private struct BasketRow: View {
+    let item: CartItem
+    let isIncluded: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: isIncluded ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isIncluded ? AppTheme.primary : AppTheme.secondaryText.opacity(0.55))
+                    .frame(width: 24, height: 24)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.productName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.text)
+                        .strikethrough(!isIncluded, color: AppTheme.secondaryText)
+                        .multilineTextAlignment(.leading)
+                    Text(item.ingredient.capitalized)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("€\(item.priceEur, specifier: "%.2f")")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppTheme.text)
+                        .strikethrough(!isIncluded, color: AppTheme.secondaryText)
+                    Text("Qty \(item.qty)")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+            .padding(.vertical, 6)
+            .opacity(isIncluded ? 1 : 0.55)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(item.productName), €\(item.priceEur, specifier: "%.2f")")
+        .accessibilityHint(isIncluded ? "Tap to skip this item" : "Tap to add this item back")
+        .accessibilityAddTraits(isIncluded ? [] : [.isSelected])
     }
 }
