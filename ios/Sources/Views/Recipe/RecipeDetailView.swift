@@ -119,7 +119,13 @@ struct RecipeDetailView: View {
             .background(.ultraThinMaterial)
         }
         .sheet(isPresented: $showingOrder) {
-            OrderCheckoutView(recipe: recipe, servings: currentServings.wrappedValue)
+            NavigationStack {
+                StoreComparisonView(
+                    recipe: recipe,
+                    servings: currentServings.wrappedValue,
+                    onClose: { showingOrder = false }
+                )
+            }
         }
     }
 

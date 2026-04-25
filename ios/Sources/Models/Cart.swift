@@ -84,42 +84,6 @@ struct CheckoutResponse: Codable {
     }
 }
 
-// MARK: - iOS aggregate (used by OrderCheckoutView until phase 4 splits it)
-
-/// Local aggregate the order screen consumes today. The fitness flow still hits
-/// `buildCart` once and gets back this combined view; phase 4 will split this
-/// into `CartComparisonResponse` (one screen) + `CartItemsResponse` (next).
-struct CartResponse: Codable, Hashable {
-    let id: String
-    let recipeId: String?
-    let status: String
-    let selectedStore: String?
-    let comparison: [StoreComparison]
-    let items: [CartItem]
-
-    var totalEur: Double {
-        items.reduce(0) { $0 + $1.priceEur }
-    }
-}
-
-extension CartResponse {
-    /// Build an aggregate from a comparison response and a chosen-store items response.
-    static func merge(
-        comparison: CartComparisonResponse,
-        items: CartItemsResponse,
-        status: String = "open"
-    ) -> CartResponse {
-        CartResponse(
-            id: items.cartId,
-            recipeId: comparison.recipeId,
-            status: status,
-            selectedStore: items.selectedStore,
-            comparison: comparison.comparison,
-            items: items.items
-        )
-    }
-}
-
 // MARK: - Store catalog helpers
 
 enum StoreCatalog {

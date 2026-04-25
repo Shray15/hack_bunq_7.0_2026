@@ -199,33 +199,39 @@ class APIService {
         catch { throw APIError.decoding(error) }
     }
 
-    // MARK: - Cart (transitional single-call shim, used by current OrderCheckoutView)
-
-    /// Builds a merged `CartResponse` (comparison + items) so the existing view
-    /// keeps working until phase 4 splits it across the two new endpoints.
-    func buildCart(from recipe: Recipe, people: Int, store: String? = nil) async throws -> CartResponse {
-        let comparison = try await compareStores(recipeId: recipe.id, people: people)
-        let chosenStore = store ?? comparison.comparison.min(by: { $0.totalEur < $1.totalEur })?.store ?? "ah"
-        let items = try await selectStore(cartId: comparison.cartId, store: chosenStore)
-        return CartResponse.merge(comparison: comparison, items: items)
-    }
-
     // MARK: - Checkout
-    func checkout(cart: CartResponse) async throws -> CheckoutResponse {
+
+    /// `POST /order/checkout` — mints a bunq.me payment URL for the given cart.
+    /// In mock mode also schedules an `order_status: paid` SSE event a few seconds
+    /// later so the wait-for-paid overlay finishes the demo loop without a
+    /// backend.
+    func checkout(cartId: String) async throws -> CheckoutResponse {
         if useMockData {
             try await Task.sleep(nanoseconds: 500_000_000)
-            return MockData.checkoutResponse
+            let orderId = "order-\(UUID().uuidString.prefix(8))"
+            let response = CheckoutResponse(
+                orderId: String(orderId),
+                paymentURL: MockData.checkoutResponse.paymentURL,
+                amountEur: MockData.checkoutResponse.amountEur
+            )
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                RealtimeService.shared.simulate(.orderStatus(OrderStatusEvent(
+                    orderId: response.orderId ?? String(orderId),
+                    status: "paid",
+                    paidAt: Date()
+                )))
+            }
+            return response
         }
 
         guard let url = URL(string: "\(baseURL)/order/checkout") else { throw APIError.invalidURL }
+        var req = authedRequest(url: url, method: "POST")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["cart_id": cartId])
 
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: ["cart_id": cart.id])
-
-        let (data, _) = try await URLSession.shared.data(for: req)
-        do { return try decoder.decode(CheckoutResponse.self, from: data) }
+        let (data, response) = try await URLSession.shared.data(for: req)
+        let validData = try await handle(data, response)
+        do { return try decoder.decode(CheckoutResponse.self, from: validData) }
         catch { throw APIError.decoding(error) }
     }
 }

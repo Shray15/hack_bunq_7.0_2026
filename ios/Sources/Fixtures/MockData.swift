@@ -172,8 +172,6 @@ enum MockData {
         ),
     ]
 
-    // MARK: - Cart fixtures (match new wire contracts)
-
     /// Pick a mock recipe whose vibe matches the transcript so demo prompts feel
     /// responsive even before a real LLM is wired up.
     static func pickRecipe(for transcript: String) -> Recipe {
@@ -215,6 +213,8 @@ enum MockData {
         "egg":       "egg",
         "frittata":  "egg",
     ]
+
+    // MARK: - Cart fixtures (match new wire contracts)
 
     static let comparisonResponse = CartComparisonResponse(
         cartId: "cart-mock-1",
@@ -327,16 +327,6 @@ enum MockData {
         case "picnic": return picnicItemsResponse
         default:       return ahItemsResponse
         }
-    }
-
-    /// Aggregate used by the current single-call OrderCheckoutView. Phase 4 will
-    /// retire this and have the view consume `CartComparisonResponse` and
-    /// `CartItemsResponse` directly.
-    static func cart(for store: String?) -> CartResponse {
-        CartResponse.merge(
-            comparison: comparisonResponse,
-            items: itemsResponse(for: store)
-        )
     }
 
     static let checkoutResponse = CheckoutResponse(
