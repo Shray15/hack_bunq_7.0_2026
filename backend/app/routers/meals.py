@@ -52,9 +52,7 @@ async def meals_history(
     from_: Annotated[datetime | None, Query(alias="from")] = None,
     to: Annotated[datetime | None, Query()] = None,
 ) -> MealsHistoryResponse:
-    return MealsHistoryResponse(
-        meals=[make_meal_log(recipe_id=uuid.uuid4(), portion=1.0)]
-    )
+    return MealsHistoryResponse(meals=[make_meal_log(recipe_id=uuid.uuid4(), portion=1.0)])
 
 
 @router.get("/options", response_model=list[MealOption])

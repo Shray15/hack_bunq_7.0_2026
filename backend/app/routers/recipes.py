@@ -46,9 +46,7 @@ async def list_recipes(
 
 
 @router.post("/{recipe_id}/favorite", response_model=FavoriteToggleResponse)
-async def toggle_favorite(
-    recipe_id: uuid.UUID, user_id: CurrentUserId
-) -> FavoriteToggleResponse:
+async def toggle_favorite(recipe_id: uuid.UUID, user_id: CurrentUserId) -> FavoriteToggleResponse:
     return FavoriteToggleResponse(
         recipe_id=recipe_id, favorited=True, favorited_at=datetime.now(UTC)
     )
