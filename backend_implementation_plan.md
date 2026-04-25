@@ -24,7 +24,7 @@ A phase is "done" when its exit criteria pass against the live EC2 deployment, n
 
 ---
 
-## Phase 0 — Foundation (one-time infra) ✅ IN PROGRESS
+## Phase 0 — Foundation (one-time infra) ✅ DONE
 
 **Goal:** A live EC2 instance reachable directly on port 4567, with GHA able to deploy a hello-world container to it automatically on `main` push.
 

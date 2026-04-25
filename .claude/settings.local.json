@@ -11,7 +11,8 @@
       "Bash(scp *)",
       "Bash(ssh-keygen -t ed25519 -f ~/.ssh/cooking_deploy_key -N \"\" -C \"gha-deploy\")",
       "Bash(ping -c 2 -W 5000 ec2-107-20-41-184.compute-1.amazonaws.com)",
-      "Bash(nc -vz -w 5 ec2-107-20-41-184.compute-1.amazonaws.com 22)"
+      "Bash(nc -vz -w 5 ec2-107-20-41-184.compute-1.amazonaws.com 22)",
+      "Bash(python -m compileall -q app alembic tests)"
     ]
   }
 }
