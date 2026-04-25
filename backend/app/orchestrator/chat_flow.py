@@ -104,14 +104,25 @@ async def _generate_and_persist(
     log.info("recipe_pipeline_start: dish=%r chat_id=%s user=%s", dish.name, chat_id, user_id)
 
     try:
-        log.info("recipe_pipeline_step: generating ingredients+steps in parallel dish=%r", dish.name)
+        log.info(
+            "recipe_pipeline_step: generating ingredients+steps in parallel dish=%r",
+            dish.name,
+        )
         ingredients, steps = await asyncio.gather(
             claude.generate_ingredients(dish, nlu.constraints, people),
             claude.generate_steps(dish),
         )
-        log.info("recipe_pipeline_step: ingredients=%d steps=%d — generating macros", len(ingredients), len(steps))
+        log.info(
+            "recipe_pipeline_step: ingredients=%d steps=%d — generating macros",
+            len(ingredients),
+            len(steps),
+        )
         macros = await claude.generate_macros(dish, ingredients)
-        log.info("recipe_pipeline_step: macros done calories=%d protein=%dg", macros.calories, macros.protein_g)
+        log.info(
+            "recipe_pipeline_step: macros done calories=%d protein=%dg",
+            macros.calories,
+            macros.protein_g,
+        )
     except BedrockError as exc:
         log.error("recipe_pipeline_bedrock_failed: dish=%r error=%s", dish.name, exc)
         await _emit_error(
@@ -142,7 +153,11 @@ async def _generate_and_persist(
             "recipe": recipe_payload.model_dump(mode="json"),
         },
     )
-    log.info("recipe_pipeline_sse_sent: recipe_complete recipe_id=%s chat_id=%s", recipe_payload.id, chat_id)
+    log.info(
+        "recipe_pipeline_sse_sent: recipe_complete recipe_id=%s chat_id=%s",
+        recipe_payload.id,
+        chat_id,
+    )
 
     asyncio.create_task(
         generate_recipe_image(
@@ -152,7 +167,11 @@ async def _generate_and_persist(
             summary=dish.summary,
         )
     )
-    log.info("recipe_pipeline_image_task_spawned: recipe_id=%s dish=%r", recipe_payload.id, dish.name)
+    log.info(
+        "recipe_pipeline_image_task_spawned: recipe_id=%s dish=%r",
+        recipe_payload.id,
+        dish.name,
+    )
 
     return recipe_payload if return_recipe else None
 

@@ -1,25 +1,29 @@
 import Foundation
 import SwiftUI
 
-enum MessageRole { case user, assistant }
+enum MessageRole: String, Codable { case user, assistant }
 
-struct ChatMessage: Identifiable {
-    let id        = UUID()
-    let role:     MessageRole
-    var text:     String
-    var recipes:  [Recipe]?
-    let timestamp = Date()
+struct ChatMessage: Identifiable, Codable, Hashable {
+    let id: UUID
+    let role: MessageRole
+    var text: String
+    var recipes: [Recipe]?
+    let timestamp: Date
 
     init(role: MessageRole, text: String, recipes: [Recipe]? = nil) {
-        self.role    = role
-        self.text    = text
+        self.id = UUID()
+        self.role = role
+        self.text = text
         self.recipes = recipes
+        self.timestamp = Date()
     }
 }
 
 @MainActor
 class ChatViewModel: ObservableObject {
-    @Published var messages: [ChatMessage] = []
+    @Published var messages: [ChatMessage] = [] {
+        didSet { persistMessages() }
+    }
     @Published var isLoading: Bool = false
     @Published var lastError: String?
 
@@ -28,7 +32,13 @@ class ChatViewModel: ObservableObject {
     private var pendingChatIds: Set<String> = []
     private var listenerTask: Task<Void, Never>?
 
+    /// We don't persist while the very first load is hydrating `messages`,
+    /// otherwise the didSet would write what we just read.
+    private var isHydrating = false
+
     init() {
+        hydrateFromStore()
+
         let stream = realtime.subscribe()
         listenerTask = Task { [weak self] in
             for await event in stream {
@@ -78,6 +88,12 @@ class ChatViewModel: ObservableObject {
         cancel()
         messages.removeAll()
         lastError = nil
+    }
+
+    /// Re-load chat history for the user that just signed in. Called by RootView
+    /// when AuthService.token flips.
+    func reloadForCurrentUser() {
+        hydrateFromStore()
     }
 
     // MARK: - Realtime handlers
@@ -143,5 +159,18 @@ class ChatViewModel: ObservableObject {
         let protein = recipe.macros.proteinG
         let mins = recipe.prepTimeMin
         return "Try \(recipe.name) — \(kcal) kcal · \(protein)g protein · \(mins) min."
+    }
+
+    // MARK: - Persistence
+
+    private func hydrateFromStore() {
+        isHydrating = true
+        defer { isHydrating = false }
+        messages = UserStore.load([ChatMessage].self, for: .chatMessages) ?? []
+    }
+
+    private func persistMessages() {
+        guard !isHydrating else { return }
+        UserStore.save(messages, for: .chatMessages)
     }
 }

@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     bedrock_max_tokens: int = 1024
     bedrock_timeout_seconds: float = 30.0
-    gemini_timeout_seconds: float = 45.0
+    gemini_timeout_seconds: float = 60.0
     chat_rate_limit_per_minute: int = 5
 
     # grocery-mcp connection (Phase 3). Required in production. Tests/local dev

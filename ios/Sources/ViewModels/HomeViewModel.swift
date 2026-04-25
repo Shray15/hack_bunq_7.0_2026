@@ -1,6 +1,6 @@
 import Foundation
 
-struct PlannedMeal: Identifiable, Hashable {
+struct PlannedMeal: Identifiable, Hashable, Codable {
     var id: String { slot }
     let slot: String
     var recipe: Recipe?

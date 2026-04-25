@@ -27,13 +27,16 @@ def is_configured() -> bool:
     return bool(settings.gemini_api_key)
 
 
-async def generate_image(dish_name: str, summary: str | None = None) -> str | None:
-    """Return a data: URL for the dish, or None on real (configured) failure.
+async def generate_image(dish_name: str, summary: str | None = None) -> str:
+    """Return a usable image URL for the dish.
 
-    When `GEMINI_API_KEY` is empty (local dev / tests) we return a deterministic
-    placeholder URL so the rest of the flow can succeed end-to-end. We only
-    return None when Gemini was actually attempted and failed; the background
-    task converts that into an `error` SSE event.
+    Order of preference:
+      1. A real Gemini-generated `data:image/png;base64,…` URL.
+      2. A deterministic placehold.co URL (when Gemini is unconfigured, times
+         out, or errors out).
+
+    We never return None — a missing image is worse for the demo than a stock
+    placeholder. The background task uses this directly as the image_url.
     """
     if not is_configured():
         return _placeholder_url(dish_name)
@@ -44,16 +47,24 @@ async def generate_image(dish_name: str, summary: str | None = None) -> str | No
     )
 
     try:
-        return await asyncio.wait_for(
+        result = await asyncio.wait_for(
             asyncio.to_thread(_blocking_generate, prompt),
             timeout=settings.gemini_timeout_seconds,
         )
+        if result is None:
+            log.warning("gemini_returned_none: %s — using placeholder", dish_name)
+            return _placeholder_url(dish_name)
+        return result
     except TimeoutError:
-        log.warning("gemini_timeout: %s", dish_name)
-        return None
+        log.warning(
+            "gemini_timeout (%.1fs): %s — using placeholder",
+            settings.gemini_timeout_seconds,
+            dish_name,
+        )
+        return _placeholder_url(dish_name)
     except Exception as exc:  # noqa: BLE001 — best-effort
-        log.warning("gemini_failed: %s — %s", dish_name, exc)
-        return None
+        log.warning("gemini_failed: %s — %s — using placeholder", dish_name, exc)
+        return _placeholder_url(dish_name)
 
 
 @functools.lru_cache(maxsize=1)

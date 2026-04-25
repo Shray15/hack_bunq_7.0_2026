@@ -152,6 +152,26 @@ _MACROS_TOOL = {
     },
 }
 
+_SUBSTITUTIONS_TOOL = {
+    "name": "emit_substitutions",
+    "description": (
+        "Emit up to 3 culinary substitutes for the missing ingredient, ordered "
+        "by how well they preserve the dish's character. Use canonical English "
+        "names that a Dutch supermarket catalogue would carry."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "alternatives": {
+                "type": "array",
+                "items": {"type": "string"},
+                "maxItems": 3,
+            }
+        },
+        "required": ["alternatives"],
+    },
+}
+
 # ---------------------------------------------------------------------------
 # System prompt (cached). Keep this stable so prompt-cache hit rate stays high.
 # ---------------------------------------------------------------------------
@@ -200,8 +220,9 @@ async def parse_transcript_to_constraints(
         f"User profile:\n{_render_profile(profile)}\n\n"
         f"User said:\n\"\"\"{transcript}\"\"\"\n\n"
         f"Context: {now.strftime('%A')} {now.strftime('%H:%M')} UTC, seed={variety_seed}. "
-        "Propose a creative, varied dish — avoid defaulting to grilled chicken or quinoa bowls unless "
-        "the user specifically asks for them. Pick something interesting that fits the request.\n\n"
+        "Propose a creative, varied dish — avoid defaulting to grilled chicken "
+        "or quinoa bowls unless the user specifically asks for them. Pick "
+        "something interesting that fits the request.\n\n"
         "Call emit_constraints with the user's normalised constraints and a "
         "proposed dish that fits both the request and the profile."
     )
@@ -267,6 +288,32 @@ async def generate_macros(
         return Macros.model_validate(payload)
     except ValidationError as exc:
         raise BedrockError(f"emit_macros invalid: {exc}") from exc
+
+
+async def suggest_substitutions(
+    *, ingredient: str, dish_name: str, store: str
+) -> list[str]:
+    """Up to 3 substitute names for a missing ingredient.
+
+    Stub mode (no AWS creds) returns an empty list — the substitution flow then
+    no-ops, leaving the original `missing` entry in place. Tests that want to
+    exercise substitutions monkey-patch this helper directly.
+    """
+    if not is_configured():
+        return []
+
+    user_msg = (
+        f"Dish: {dish_name}\n"
+        f"Store the user is shopping at: {store.upper()}\n"
+        f"Missing ingredient: {ingredient}\n\n"
+        "Call emit_substitutions with up to 3 alternatives that the user could "
+        "buy at this store and that preserve the dish's character."
+    )
+    payload = await _invoke_tool(_SUBSTITUTIONS_TOOL, user_msg)
+    alts = payload.get("alternatives") or []
+    if not isinstance(alts, list):
+        return []
+    return [str(a).strip() for a in alts if isinstance(a, str) and a.strip()]
 
 
 # ---------------------------------------------------------------------------

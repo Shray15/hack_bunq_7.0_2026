@@ -245,7 +245,16 @@ _STUB_PRODUCT_TEMPLATES: dict[str, dict[str, dict[str, Any]]] = {
             "unit": "750 ml",
             "price_eur": 5.99,
         },
-        # parsley deliberately missing at picnic to exercise missing-flow
+        # `parsley` deliberately missing at picnic — it triggers the
+        # substitution flow. `italian parsley` IS in the catalogue so a
+        # monkey-patched suggest_substitutions can land a valid swap.
+        "italian parsley": {
+            "product_id": "pic-3344b",
+            "name": "Italian peterselie",
+            "image_url": "https://placehold.co/240x240/png?text=Italian+Parsley",
+            "unit": "1 bunch",
+            "price_eur": 1.39,
+        },
     },
 }
 

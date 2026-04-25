@@ -44,12 +44,16 @@ struct RootView: View {
         .onAppear {
             syncRealtime()
             if auth.isAuthenticated {
+                appState.reloadForCurrentUser()
                 Task { await appState.refreshProfileFromBackend() }
             }
         }
         .onChange(of: auth.isAuthenticated) { _, isAuthed in
             syncRealtime()
             if isAuthed {
+                // New session — pull this user's persisted recipes / planned
+                // meals / chat history off disk before first paint.
+                appState.reloadForCurrentUser()
                 Task { await appState.refreshProfileFromBackend() }
             }
         }

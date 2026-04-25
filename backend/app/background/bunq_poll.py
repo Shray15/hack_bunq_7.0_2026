@@ -17,6 +17,7 @@ import logging
 import time
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 
@@ -24,8 +25,9 @@ from app.adapters import grocery_mcp
 from app.adapters.grocery_mcp import GroceryMcpError
 from app.config import settings
 from app.db import SessionLocal
-from app.models import Order
+from app.models import Cart, MealConsumed, Order, Recipe
 from app.realtime import EventName, hub
+from app.schemas.common import Macros
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +81,7 @@ async def _transition(
         row.status = new_status
         if paid:
             row.paid_at = datetime.now(UTC)
+            await _autolog_meal(db, row)
         await db.commit()
         await db.refresh(row)
 
@@ -89,6 +92,32 @@ async def _transition(
     if paid:
         payload["paid_at"] = row.paid_at.isoformat() if row.paid_at else None
     await hub.publish(user_id, EventName.ORDER_STATUS, payload)
+
+
+async def _autolog_meal(db: Any, order: Order) -> None:
+    """Insert a meals_consumed row for the recipe behind this paid order."""
+    cart = (
+        await db.execute(select(Cart).where(Cart.id == order.cart_id))
+    ).scalar_one_or_none()
+    if cart is None:
+        return
+    recipe = (
+        await db.execute(select(Recipe).where(Recipe.id == cart.recipe_id))
+    ).scalar_one_or_none()
+    if recipe is None:
+        return
+    macros = Macros.model_validate(recipe.macros)
+    db.add(
+        MealConsumed(
+            owner_id=order.owner_id,
+            recipe_id=recipe.id,
+            portion=1.0,
+            calories_computed=macros.calories,
+            macros_computed=macros.model_dump(mode="json"),
+            eaten_at=datetime.now(UTC),
+            source="order",
+        )
+    )
 
 
 async def _is_still_ready_to_pay(order_id: uuid.UUID) -> bool:

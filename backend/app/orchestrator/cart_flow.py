@@ -30,6 +30,7 @@ from app.adapters.grocery_mcp import GroceryMcpError
 from app.models import Cart as CartModel
 from app.models import CartItem as CartItemModel
 from app.models import Recipe as RecipeModel
+from app.orchestrator.substitution_flow import run_substitution_flow
 from app.realtime import EventName, hub
 from app.schemas import (
     CartComparisonResponse,
@@ -101,6 +102,14 @@ async def from_recipe(
             },
         )
     )
+
+    # Self-heal any missing ingredients in the background. Substitution emits
+    # its own substitution_proposed + (updated) cart_ready when it succeeds.
+    if any(comparison_row.missing_count for comparison_row in comparison):
+        asyncio.create_task(
+            run_substitution_flow(user_id=user_id, cart_id=cart.id)
+        )
+
     return CartComparisonResponse(
         cart_id=cart.id,
         recipe_id=recipe_id,

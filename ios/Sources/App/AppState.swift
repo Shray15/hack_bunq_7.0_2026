@@ -1,22 +1,17 @@
 import Foundation
 import Combine
 
-struct DayKcal: Identifiable, Hashable {
-    let id = UUID()
+struct DayKcal: Identifiable, Hashable, Codable {
+    var id = UUID()
     let date: Date
     let kcal: Int?
 }
 
 @MainActor
 final class AppState: ObservableObject {
-    private static let savedRecipeIDsKey   = "saved_recipe_ids"
-    private static let bodyStatsKey        = "body_stats_v1"
-    private static let weightLogKey        = "weight_log_v1"
-    private static let waterByDateKey      = "water_by_date_v1"
-
-    @Published var displayName: String = "Sai"
+    @Published var displayName: String = "Sai" { didSet { persistDisplayName() } }
     @Published var dietType: DietType = .balanced { didSet { schedulePatchIfChanged(dietType, oldValue) } }
-    @Published var householdSize: Int = 1
+    @Published var householdSize: Int = 1 { didSet { persistHouseholdSize() } }
 
     // MARK: - Body stats & goal (persisted)
 
@@ -29,14 +24,10 @@ final class AppState: ObservableObject {
 
     // MARK: - Library & meal state
 
-    @Published var recipeLibrary: [Recipe] = []
-    @Published var savedRecipeIDs: Set<String> = [] {
-        didSet {
-            UserDefaults.standard.set(Array(savedRecipeIDs), forKey: Self.savedRecipeIDsKey)
-        }
-    }
-    @Published var plannedMeals: [PlannedMeal] = []
-    @Published var weeklyHistory: [DayKcal] = []
+    @Published var recipeLibrary: [Recipe] = [] { didSet { persistRecipeLibrary() } }
+    @Published var savedRecipeIDs: Set<String> = [] { didSet { persistSavedRecipeIDs() } }
+    @Published var plannedMeals: [PlannedMeal] = [] { didSet { persistPlannedMeals() } }
+    @Published var weeklyHistory: [DayKcal] = [] { didSet { persistWeeklyHistory() } }
     @Published var upcomingDelivery: Date?
     @Published var planningPrefill: String?
     @Published var pendingMealSlot: String?
@@ -47,6 +38,10 @@ final class AppState: ObservableObject {
     @Published private(set) var waterByDate: [String: Int] = [:] {
         didSet { persistWaterLog() }
     }
+
+    /// While true, didSet observers skip persisting. Used during hydration to
+    /// stop the just-loaded values from being written straight back out.
+    private var isHydrating = false
 
     // MARK: - Backend profile sync state
 
@@ -62,13 +57,22 @@ final class AppState: ObservableObject {
     @Published var healthKitAuthorized: Bool = false
 
     init() {
-        loadPersistence()
+        hydrateFromStore()
+        loadMock()
+    }
+
+    /// Re-hydrate every persisted slice from `UserStore` for the user that's
+    /// currently authenticated. Call this after login / on auth flips so the
+    /// previous user's residual state isn't shown.
+    func reloadForCurrentUser() {
+        hydrateFromStore()
         loadMock()
     }
 
     // MARK: - Persistence
 
     private func persistBodyStats() {
+        guard !isHydrating else { return }
         let snapshot = BodyStatsSnapshot(
             bodyweightKg: bodyweightKg,
             heightCm: heightCm,
@@ -77,26 +81,54 @@ final class AppState: ObservableObject {
             goal: goal,
             activityLevel: activityLevel
         )
-        if let data = try? JSONEncoder().encode(snapshot) {
-            UserDefaults.standard.set(data, forKey: Self.bodyStatsKey)
-        }
+        UserStore.save(snapshot, for: .bodyStats)
     }
 
     private func persistWeightLog() {
-        if let data = try? JSONEncoder().encode(weightLog) {
-            UserDefaults.standard.set(data, forKey: Self.weightLogKey)
-        }
+        guard !isHydrating else { return }
+        UserStore.save(weightLog, for: .weightLog)
     }
 
     private func persistWaterLog() {
-        if let data = try? JSONEncoder().encode(waterByDate) {
-            UserDefaults.standard.set(data, forKey: Self.waterByDateKey)
-        }
+        guard !isHydrating else { return }
+        UserStore.save(waterByDate, for: .waterByDate)
     }
 
-    private func loadPersistence() {
-        if let data = UserDefaults.standard.data(forKey: Self.bodyStatsKey),
-           let snapshot = try? JSONDecoder().decode(BodyStatsSnapshot.self, from: data) {
+    private func persistRecipeLibrary() {
+        guard !isHydrating else { return }
+        UserStore.save(recipeLibrary, for: .recipeLibrary)
+    }
+
+    private func persistSavedRecipeIDs() {
+        guard !isHydrating else { return }
+        UserStore.save(Array(savedRecipeIDs), for: .savedRecipeIDs)
+    }
+
+    private func persistPlannedMeals() {
+        guard !isHydrating else { return }
+        UserStore.save(plannedMeals, for: .plannedMeals)
+    }
+
+    private func persistWeeklyHistory() {
+        guard !isHydrating else { return }
+        UserStore.save(weeklyHistory, for: .weeklyHistory)
+    }
+
+    private func persistDisplayName() {
+        guard !isHydrating else { return }
+        UserStore.save(displayName, for: .displayName)
+    }
+
+    private func persistHouseholdSize() {
+        guard !isHydrating else { return }
+        UserStore.save(householdSize, for: .householdSize)
+    }
+
+    private func hydrateFromStore() {
+        isHydrating = true
+        defer { isHydrating = false }
+
+        if let snapshot = UserStore.load(BodyStatsSnapshot.self, for: .bodyStats) {
             bodyweightKg = snapshot.bodyweightKg
             heightCm = snapshot.heightCm
             age = snapshot.age
@@ -104,13 +136,17 @@ final class AppState: ObservableObject {
             goal = snapshot.goal
             activityLevel = snapshot.activityLevel
         }
-        if let data = UserDefaults.standard.data(forKey: Self.weightLogKey),
-           let log = try? JSONDecoder().decode([WeightEntry].self, from: data) {
-            weightLog = log
+        weightLog    = UserStore.load([WeightEntry].self, for: .weightLog)        ?? []
+        waterByDate  = UserStore.load([String: Int].self, for: .waterByDate)      ?? [:]
+        recipeLibrary = UserStore.load([Recipe].self, for: .recipeLibrary)        ?? []
+        plannedMeals  = UserStore.load([PlannedMeal].self, for: .plannedMeals)    ?? []
+        weeklyHistory = UserStore.load([DayKcal].self, for: .weeklyHistory)       ?? []
+        savedRecipeIDs = Set(UserStore.load([String].self, for: .savedRecipeIDs)  ?? [])
+        if let name = UserStore.load(String.self, for: .displayName) {
+            displayName = name
         }
-        if let data = UserDefaults.standard.data(forKey: Self.waterByDateKey),
-           let dict = try? JSONDecoder().decode([String: Int].self, from: data) {
-            waterByDate = dict
+        if let hh = UserStore.load(Int.self, for: .householdSize) {
+            householdSize = hh
         }
     }
 
@@ -449,42 +485,38 @@ final class AppState: ObservableObject {
 
     // MARK: - Mock seed
 
-    /// Always-seeded baseline that holds for both mock and live modes:
-    /// three empty meal slots so chat-generated recipes have somewhere to land.
-    /// Live mode stops here — the user populates everything themselves.
-    /// Mock mode layers in demo content (sample recipes, historical weights,
-    /// pre-eaten breakfast/lunch) so the UI looks alive without a backend.
+    /// Seeds defaults *only when the persisted state is empty* — so reopening
+    /// the app preserves whatever the user has accumulated (chat-generated
+    /// recipes, planned meals, weekly history). Mock mode adds demo fixtures
+    /// on top, again only when there's no real saved state.
     private func loadMock() {
         let calendar = Calendar.current
         let now = Date()
 
-        // Stored saves persist across sessions in any mode.
-        if let storedRecipeIDs = UserDefaults.standard.array(forKey: Self.savedRecipeIDsKey) as? [String] {
-            savedRecipeIDs = Set(storedRecipeIDs)
+        // Empty slots so MealRow renders the "Plan this meal" CTA on a clean
+        // account. Existing slots from `hydrateFromStore` are kept.
+        if plannedMeals.isEmpty {
+            plannedMeals = [
+                PlannedMeal(slot: "Breakfast", recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
+                PlannedMeal(slot: "Lunch",     recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
+                PlannedMeal(slot: "Dinner",    recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
+            ]
         }
-
-        // Empty slots so MealRow renders the "Plan this meal" CTA from launch.
-        plannedMeals = [
-            PlannedMeal(slot: "Breakfast", recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
-            PlannedMeal(slot: "Lunch",     recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
-            PlannedMeal(slot: "Dinner",    recipe: nil, title: nil, calories: 0, imageURL: nil, loggedAt: nil),
-        ]
         upcomingDelivery = nil
 
         guard APIService.shared.useMockData else {
-            // Live backend: fresh accounts start with a clean slate. Recipe
-            // library, weight history, and weekly kcal history all populate as
-            // the user actually uses the app.
-            recipeLibrary = []
-            weeklyHistory = []
+            // Live backend: nothing to seed. recipeLibrary / weeklyHistory
+            // populate organically as the user uses the app.
             return
         }
 
-        // Demo mode: seed a richer starting state.
+        // Demo mode below: only seed when persisted slot is genuinely empty.
         let breakfast = calendar.date(bySettingHour: 8, minute: 10, second: 0, of: now) ?? now
         let lunch = calendar.date(bySettingHour: 12, minute: 35, second: 0, of: now) ?? now
 
-        recipeLibrary = MockData.recipes
+        if recipeLibrary.isEmpty {
+            recipeLibrary = MockData.recipes
+        }
         if savedRecipeIDs.isEmpty, let starterRecipe = MockData.recipes.first {
             savedRecipeIDs = [starterRecipe.id]
         }
@@ -501,39 +533,44 @@ final class AppState: ObservableObject {
             .sorted { $0.date < $1.date }
         }
 
-        plannedMeals = [
-            PlannedMeal(
-                slot: "Breakfast",
-                recipe: nil,
-                title: "Overnight Oats",
-                calories: 380,
-                protein: 23,
-                carbs: 52,
-                fat: 10,
-                imageURL: URL(string: "https://images.unsplash.com/photo-1614961233913-a5113a4a34ed?w=300"),
-                loggedAt: breakfast
-            ),
-            PlannedMeal(
-                slot: "Lunch",
-                recipe: MockData.recipes.first,
-                title: nil,
-                calories: MockData.recipes.first?.calories ?? 540,
-                protein: Int(MockData.recipes.first?.macros.proteinG ?? 45),
-                carbs: Int(MockData.recipes.first?.macros.carbsG ?? 40),
-                fat: Int(MockData.recipes.first?.macros.fatG ?? 18),
-                imageURL: MockData.recipes.first?.imageURL,
-                loggedAt: lunch
-            ),
-            PlannedMeal(
-                slot: "Dinner",
-                recipe: nil,
-                title: nil,
-                calories: 0,
-                imageURL: nil,
-                loggedAt: nil
-            ),
-        ]
-        weeklyHistory = generateMockHistory(today: now, calendar: calendar)
+        let allSlotsEmpty = plannedMeals.allSatisfy { !$0.isPlanned }
+        if allSlotsEmpty {
+            plannedMeals = [
+                PlannedMeal(
+                    slot: "Breakfast",
+                    recipe: nil,
+                    title: "Overnight Oats",
+                    calories: 380,
+                    protein: 23,
+                    carbs: 52,
+                    fat: 10,
+                    imageURL: URL(string: "https://images.unsplash.com/photo-1614961233913-a5113a4a34ed?w=300"),
+                    loggedAt: breakfast
+                ),
+                PlannedMeal(
+                    slot: "Lunch",
+                    recipe: MockData.recipes.first,
+                    title: nil,
+                    calories: MockData.recipes.first?.calories ?? 540,
+                    protein: Int(MockData.recipes.first?.macros.proteinG ?? 45),
+                    carbs: Int(MockData.recipes.first?.macros.carbsG ?? 40),
+                    fat: Int(MockData.recipes.first?.macros.fatG ?? 18),
+                    imageURL: MockData.recipes.first?.imageURL,
+                    loggedAt: lunch
+                ),
+                PlannedMeal(
+                    slot: "Dinner",
+                    recipe: nil,
+                    title: nil,
+                    calories: 0,
+                    imageURL: nil,
+                    loggedAt: nil
+                ),
+            ]
+        }
+        if weeklyHistory.isEmpty {
+            weeklyHistory = generateMockHistory(today: now, calendar: calendar)
+        }
     }
 
     private func generateMockHistory(today: Date, calendar: Calendar) -> [DayKcal] {
