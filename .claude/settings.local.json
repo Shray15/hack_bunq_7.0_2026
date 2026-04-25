@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('/Users/rohityadav/Documents/Projects-AI/GitHub/hack_bunq_7.0_2026/.github/workflows/deploy.yml'\\)\\); print\\('deploy.yml: OK'\\)\")",
+      "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('/Users/rohityadav/Documents/Projects-AI/GitHub/hack_bunq_7.0_2026/deploy/docker-compose.yml'\\)\\); print\\('docker-compose.yml: OK'\\)\")",
+      "Bash(python3 *)",
+      "Read(//Users/rohityadav/.ssh/**)",
+      "Read(//Users/rohityadav/Downloads/**)",
+      "Read(//Users/rohityadav/**)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(ssh-keygen -t ed25519 -f ~/.ssh/cooking_deploy_key -N \"\" -C \"gha-deploy\")",
+      "Bash(ping -c 2 -W 5000 ec2-107-20-41-184.compute-1.amazonaws.com)",
+      "Bash(nc -vz -w 5 ec2-107-20-41-184.compute-1.amazonaws.com 22)"
+    ]
+  }
+}
