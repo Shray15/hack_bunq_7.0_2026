@@ -105,6 +105,7 @@ jobs:
           PICNIC_AUTH_TOKEN: ${{ secrets.PICNIC_AUTH_TOKEN }}
           PICNIC_EMAIL: ${{ secrets.PICNIC_EMAIL }}
           PICNIC_PASSWORD: ${{ secrets.PICNIC_PASSWORD }}
+          BUNQ_ME_USERNAME: ${{ secrets.BUNQ_ME_USERNAME }}
         run: |
           set -euo pipefail
           umask 077
@@ -130,6 +131,7 @@ jobs:
             echo "PICNIC_AUTH_TOKEN=${PICNIC_AUTH_TOKEN}"
             echo "PICNIC_EMAIL=${PICNIC_EMAIL}"
             echo "PICNIC_PASSWORD=${PICNIC_PASSWORD}"
+            echo "BUNQ_ME_USERNAME=${BUNQ_ME_USERNAME}"
           } > .env.staging
 
       - name: Sync compose + .env to EC2 staging directory
