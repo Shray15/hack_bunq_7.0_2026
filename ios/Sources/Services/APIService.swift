@@ -24,7 +24,7 @@ class APIService {
     static let shared = APIService()
     private init() {}
 
-    var baseURL = "http://107.20.41.184:4568"
+    var baseURL = "http://107.20.41.184:4567"
     var useMockData = false
 
     /// Every Codable in the project declares explicit snake_case CodingKeys, so
