@@ -95,12 +95,7 @@ jobs:
           VERSION: ${{ steps.tags.outputs.version }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AGENTCORE_MEMORY_ROLE_ARN: ${{ secrets.AGENTCORE_MEMORY_ROLE_ARN }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BUNQ_API_KEY: ${{ secrets.BUNQ_API_KEY }}
           PICNIC_AUTH_TOKEN: ${{ secrets.PICNIC_AUTH_TOKEN }}
@@ -120,13 +115,7 @@ jobs:
             echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
             echo "JWT_SECRET=${JWT_SECRET}"
             echo "GROCERY_MCP_URL=http://grocery-mcp:8001/mcp"
-            echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
-            echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
-            echo "AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}"
-            echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}"
-            echo "AWS_REGION=${AWS_REGION:-us-east-1}"
-            echo "AGENTCORE_MEMORY_ROLE_ARN=${AGENTCORE_MEMORY_ROLE_ARN}"
-            echo "AWS_BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+            echo "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}"
             echo "GEMINI_API_KEY=${GEMINI_API_KEY}"
             echo "BUNQ_API_KEY=${BUNQ_API_KEY}"
             echo "PICNIC_AUTH_TOKEN=${PICNIC_AUTH_TOKEN}"

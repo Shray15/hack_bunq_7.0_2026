@@ -2,7 +2,7 @@
 
 After the initial cart fan-out, every missing ingredient gets one chance:
 
-  1. Ask Claude for up to 3 alternatives at this store.
+  1. Ask DeepSeek for up to 3 alternatives at this store.
   2. Probe grocery-mcp.search_products with each alternative in order.
   3. On the first hit, add the alternative as a CartItem at that store and
      drop the ingredient from cart.missing_by_store[store].
@@ -21,7 +21,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters import claude, grocery_mcp
+from app.adapters import deepseek, grocery_mcp
 from app.adapters.grocery_mcp import GroceryMcpError
 from app.db import SessionLocal
 from app.models import Cart as CartModel
@@ -91,7 +91,7 @@ async def _try_one_substitution(
     user_id: uuid.UUID,
 ) -> bool:
     try:
-        alternatives = await claude.suggest_substitutions(
+        alternatives = await deepseek.suggest_substitutions(
             ingredient=ingredient, dish_name=dish_name, store=store
         )
     except Exception as exc:  # noqa: BLE001 — never let a Bedrock error kill the task

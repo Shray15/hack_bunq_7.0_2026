@@ -1,6 +1,6 @@
 """End-to-end Phase-2 chat flow tests, exercised in adapter stub mode.
 
-Bedrock + Gemini are unconfigured in the test env (`AWS_ACCESS_KEY_ID`,
+DeepSeek + Gemini are unconfigured in the test env (`DEEPSEEK_API_KEY`,
 `GEMINI_API_KEY` empty), so each adapter returns a deterministic stub. That
 lets us assert orchestrator behaviour — DB persistence, SSE event order, the
 shape of the persisted recipe — without ever calling a real LLM.
