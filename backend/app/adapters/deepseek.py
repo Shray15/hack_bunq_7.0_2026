@@ -1,4 +1,4 @@
-"""AWS Bedrock (Anthropic Claude) adapter.
+"""DeepSeek (OpenAI-compatible) adapter.
 
 Wraps four narrow LLM calls used by the recipe orchestrator:
 
@@ -7,14 +7,12 @@ Wraps four narrow LLM calls used by the recipe orchestrator:
   3. generate_steps                    — proposed dish → 5–8 cooking steps
   4. generate_macros                   — dish + ingredients → estimated macros (LLM)
 
-Each call uses tool-use with a forced tool_choice so Claude always returns
-strict structured JSON. The static system prompt is sent inside an array with
-`cache_control: ephemeral` so we benefit from Anthropic's prompt cache once
-the same prompt is hit repeatedly.
+Each call uses function/tool calling with a forced tool_choice so DeepSeek always
+returns strict structured JSON.
 
-If `AWS_ACCESS_KEY_ID` is empty (local dev / tests), every helper returns a
+If `DEEPSEEK_API_KEY` is empty (local dev / tests), every helper returns a
 deterministic stub so the rest of the orchestrator can be exercised without
-hitting Bedrock. Production failures raise `BedrockError`; the orchestrator
+hitting the API. Production failures raise `DeepSeekError`; the orchestrator
 catches that and emits an `error` SSE event without persisting anything.
 """
 
@@ -28,7 +26,7 @@ import random
 from datetime import UTC, datetime
 from typing import Any
 
-import boto3
+from openai import AsyncOpenAI
 from pydantic import BaseModel, ValidationError
 
 from app.config import settings
@@ -39,8 +37,8 @@ from app.schemas.recipe import RecipeConstraints, RecipeIngredient
 log = logging.getLogger(__name__)
 
 
-class BedrockError(RuntimeError):
-    """Wraps any failure invoking Bedrock so the orchestrator can degrade."""
+class DeepSeekError(RuntimeError):
+    """Wraps any failure invoking DeepSeek so the orchestrator can degrade."""
 
 
 class ProposedDish(BaseModel):
@@ -55,7 +53,7 @@ class NLUResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Tool schemas (JSON Schema, sent as the tool's `input_schema`)
+# Tool schemas (JSON Schema, sent as the function's `parameters`)
 # ---------------------------------------------------------------------------
 
 _CONSTRAINTS_PROPS: dict[str, Any] = {
@@ -173,7 +171,7 @@ _SUBSTITUTIONS_TOOL = {
 }
 
 # ---------------------------------------------------------------------------
-# System prompt (cached). Keep this stable so prompt-cache hit rate stays high.
+# System prompt. Keep stable to benefit from DeepSeek's server-side KV cache.
 # ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = """You are the recipe brain of a voice-first cooking app.
@@ -220,8 +218,8 @@ plain prose. Your output must satisfy these rules:
 
 
 def is_configured() -> bool:
-    """True iff the adapter has enough config to call real Bedrock."""
-    return bool(settings.aws_access_key_id and settings.aws_secret_access_key)
+    """True iff the adapter has enough config to call the real DeepSeek API."""
+    return bool(settings.deepseek_api_key)
 
 
 async def parse_transcript_to_constraints(
@@ -258,7 +256,7 @@ async def parse_transcript_to_constraints(
     try:
         return NLUResult.model_validate(payload)
     except ValidationError as exc:
-        raise BedrockError(f"emit_constraints returned invalid payload: {exc}") from exc
+        raise DeepSeekError(f"emit_constraints returned invalid payload: {exc}") from exc
 
 
 async def generate_ingredients(
@@ -281,7 +279,7 @@ async def generate_ingredients(
     try:
         return [RecipeIngredient.model_validate(i) for i in items]
     except ValidationError as exc:
-        raise BedrockError(f"emit_recipe_ingredients invalid: {exc}") from exc
+        raise DeepSeekError(f"emit_recipe_ingredients invalid: {exc}") from exc
 
 
 async def generate_steps(dish: ProposedDish) -> list[str]:
@@ -296,7 +294,7 @@ async def generate_steps(dish: ProposedDish) -> list[str]:
     payload = await _invoke_tool(_STEPS_TOOL, user_msg)
     steps = payload.get("steps") or []
     if not isinstance(steps, list) or not all(isinstance(s, str) for s in steps):
-        raise BedrockError("emit_recipe_steps did not return a list of strings")
+        raise DeepSeekError("emit_recipe_steps did not return a list of strings")
     return steps
 
 
@@ -324,7 +322,7 @@ async def generate_macros(
     try:
         return Macros.model_validate(payload)
     except ValidationError as exc:
-        raise BedrockError(f"emit_macros invalid: {exc}") from exc
+        raise DeepSeekError(f"emit_macros invalid: {exc}") from exc
 
 
 async def suggest_substitutions(
@@ -332,9 +330,8 @@ async def suggest_substitutions(
 ) -> list[str]:
     """Up to 3 substitute names for a missing ingredient.
 
-    Stub mode (no AWS creds) returns an empty list — the substitution flow then
-    no-ops, leaving the original `missing` entry in place. Tests that want to
-    exercise substitutions monkey-patch this helper directly.
+    Stub mode (no API key) returns an empty list — the substitution flow then
+    no-ops, leaving the original `missing` entry in place.
     """
     if not is_configured():
         return []
@@ -354,70 +351,52 @@ async def suggest_substitutions(
 
 
 # ---------------------------------------------------------------------------
-# Bedrock plumbing
+# DeepSeek plumbing
 # ---------------------------------------------------------------------------
 
 
 @functools.lru_cache(maxsize=1)
-def _client() -> Any:
-    return boto3.client(
-        service_name="bedrock-runtime",
-        region_name=settings.aws_region or settings.aws_default_region,
-        aws_access_key_id=settings.aws_access_key_id or None,
-        aws_secret_access_key=settings.aws_secret_access_key or None,
-        aws_session_token=settings.aws_session_token or None,
+def _client() -> AsyncOpenAI:
+    return AsyncOpenAI(
+        api_key=settings.deepseek_api_key,
+        base_url="https://api.deepseek.com",
     )
 
 
 async def _invoke_tool(tool: dict[str, Any], user_msg: str) -> dict[str, Any]:
-    """Invoke Bedrock-Anthropic with a forced tool_choice and return the tool input."""
-    body = json.dumps(
-        {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": settings.bedrock_max_tokens,
-            "system": [
-                {
-                    "type": "text",
-                    "text": _SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            "tools": [tool],
-            "tool_choice": {"type": "tool", "name": tool["name"]},
-            "messages": [{"role": "user", "content": user_msg}],
-        }
-    )
-
+    """Call DeepSeek with a forced function/tool_choice and return the parsed arguments."""
+    openai_tool = {
+        "type": "function",
+        "function": {
+            "name": tool["name"],
+            "description": tool["description"],
+            "parameters": tool["input_schema"],
+        },
+    }
     try:
         response = await asyncio.wait_for(
-            asyncio.to_thread(
-                _client().invoke_model,
-                modelId=settings.aws_bedrock_model_id,
-                body=body,
-                contentType="application/json",
-                accept="application/json",
+            _client().chat.completions.create(
+                model=settings.deepseek_model,
+                max_tokens=settings.deepseek_max_tokens,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": user_msg},
+                ],
+                tools=[openai_tool],
+                tool_choice={"type": "function", "function": {"name": tool["name"]}},
             ),
-            timeout=settings.bedrock_timeout_seconds,
+            timeout=settings.deepseek_timeout_seconds,
         )
-    except TimeoutError as exc:  # asyncio.wait_for re-raises asyncio.TimeoutError
-        raise BedrockError("Bedrock invoke_model timed out") from exc
-    except Exception as exc:  # boto3 raises ClientError; treat any failure as opaque
-        raise BedrockError(f"Bedrock invoke_model failed: {exc}") from exc
+    except TimeoutError as exc:
+        raise DeepSeekError("DeepSeek API call timed out") from exc
+    except Exception as exc:
+        raise DeepSeekError(f"DeepSeek API call failed: {exc}") from exc
 
     try:
-        result = json.loads(response["body"].read())
-    except (KeyError, json.JSONDecodeError) as exc:
-        raise BedrockError(f"Bedrock response malformed: {exc}") from exc
-
-    for block in result.get("content", []):
-        if block.get("type") == "tool_use" and block.get("name") == tool["name"]:
-            value = block.get("input")
-            if isinstance(value, dict):
-                return value
-
-    raise BedrockError(
-        f"Bedrock did not return a tool_use block for {tool['name']}: {result}"
-    )
+        tool_call = response.choices[0].message.tool_calls[0]
+        return json.loads(tool_call.function.arguments)
+    except (IndexError, AttributeError, json.JSONDecodeError, TypeError) as exc:
+        raise DeepSeekError(f"DeepSeek response malformed: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -451,7 +430,7 @@ def _render_ingredients(items: list[RecipeIngredient]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Stub responses (used when AWS creds aren't configured)
+# Stub responses (used when DEEPSEEK_API_KEY isn't configured)
 # ---------------------------------------------------------------------------
 
 
@@ -493,13 +472,7 @@ def _stub_steps(dish: ProposedDish) -> list[str]:
 
 
 def _stub_macros(constraints: RecipeConstraints | None) -> Macros:
-    """Profile-aware stub: scale macros to the per-meal target if known.
-
-    Real Bedrock estimates from ingredients; without it we used to return a
-    flat 560 kcal regardless of profile, so a 3500 kcal/day user got the same
-    plate as a 1500 kcal/day user. Now we honour `constraints.calories_max`
-    and split into a 30P/40C/30F macro ratio.
-    """
+    """Profile-aware stub: scale macros to the per-meal target if known."""
     target = (constraints.calories_max if constraints else None) or 600
     return Macros(
         calories=target,
@@ -514,7 +487,7 @@ def _guess_dish_name(transcript: str) -> str:
     cleaned = transcript.lower().strip().rstrip(".!?")
     for stem in ("i want to make ", "i want ", "make me ", "let's cook ", "cook "):
         if cleaned.startswith(stem):
-            cleaned = cleaned[len(stem) :]
+            cleaned = cleaned[len(stem):]
             break
     if not cleaned:
         cleaned = "lemon herb chicken"

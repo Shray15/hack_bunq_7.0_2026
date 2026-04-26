@@ -10,7 +10,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.adapters import claude
+from app.adapters import deepseek
 from app.db import SessionLocal
 from app.models import Cart as CartModel
 from app.models import MealConsumed
@@ -37,7 +37,7 @@ async def test_substitution_swaps_missing_picnic_parsley(
             return ["italiaanse peterselie"]
         return []
 
-    monkeypatch.setattr(claude, "suggest_substitutions", fake_suggest)
+    monkeypatch.setattr(deepseek, "suggest_substitutions", fake_suggest)
 
     seen: list[dict[str, str | None]] = []
 

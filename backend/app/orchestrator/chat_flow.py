@@ -7,7 +7,7 @@ Two entry points:
 
 Both produce the same observable behaviour from iOS' perspective: a
 `recipe_complete` SSE event once the recipe lands, then `image_ready` once the
-image task finishes. Bedrock failures emit an `error` SSE and persist nothing.
+image task finishes. LLM failures emit an `error` SSE and persist nothing.
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters import claude
-from app.adapters.claude import BedrockError, NLUResult, ProposedDish
+from app.adapters import deepseek
+from app.adapters.deepseek import DeepSeekError, NLUResult, ProposedDish
 from app.background.images import generate_recipe_image
 from app.db import SessionLocal
 from app.models import Recipe as RecipeModel
@@ -42,9 +42,9 @@ async def run_chat_flow(
     """Voice/text → recipe pipeline. Pushes SSE events; returns nothing."""
     log.info("chat_flow_start: chat_id=%s user=%s", chat_id, user_id)
     try:
-        nlu = await claude.parse_transcript_to_constraints(transcript, profile)
+        nlu = await deepseek.parse_transcript_to_constraints(transcript, profile)
         log.info("chat_flow_nlu_done: dish=%r chat_id=%s", nlu.dish.name, chat_id)
-    except BedrockError as exc:
+    except DeepSeekError as exc:
         log.error("chat_flow_nlu_failed: chat_id=%s error=%s", chat_id, exc)
         await _emit_error(user_id, "nlu", "nlu_failed", str(exc), chat_id=chat_id)
         return
@@ -109,24 +109,24 @@ async def _generate_and_persist(
             dish.name,
         )
         ingredients, steps = await asyncio.gather(
-            claude.generate_ingredients(dish, nlu.constraints, people),
-            claude.generate_steps(dish),
+            deepseek.generate_ingredients(dish, nlu.constraints, people),
+            deepseek.generate_steps(dish),
         )
         log.info(
             "recipe_pipeline_step: ingredients=%d steps=%d — generating macros",
             len(ingredients),
             len(steps),
         )
-        macros = await claude.generate_macros(dish, ingredients, nlu.constraints)
+        macros = await deepseek.generate_macros(dish, ingredients, nlu.constraints)
         log.info(
             "recipe_pipeline_step: macros done calories=%d protein=%dg",
             macros.calories,
             macros.protein_g,
         )
-    except BedrockError as exc:
-        log.error("recipe_pipeline_bedrock_failed: dish=%r error=%s", dish.name, exc)
+    except DeepSeekError as exc:
+        log.error("recipe_pipeline_llm_failed: dish=%r error=%s", dish.name, exc)
         await _emit_error(
-            user_id, "recipe_generation", "bedrock_failed", str(exc), chat_id=chat_id
+            user_id, "recipe_generation", "llm_failed", str(exc), chat_id=chat_id
         )
         return None
 
@@ -181,7 +181,7 @@ async def _propose_dish_for_constraints(
 ) -> ProposedDish:
     """For programmatic /recipes/generate, derive a dish_name from constraints."""
     transcript = _constraints_to_transcript(constraints)
-    nlu = await claude.parse_transcript_to_constraints(transcript, profile)
+    nlu = await deepseek.parse_transcript_to_constraints(transcript, profile)
     return nlu.dish
 
 

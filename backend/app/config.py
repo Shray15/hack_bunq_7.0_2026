@@ -24,21 +24,16 @@ class Settings(BaseSettings):
 
     sse_heartbeat_seconds: int = 15
 
-    aws_region: str = "us-east-1"
-    aws_default_region: str = "us-east-1"
-    aws_bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    aws_access_key_id: str = ""
-    aws_secret_access_key: str = ""
-    aws_session_token: str = ""
-    agentcore_memory_role_arn: str = ""
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
+    deepseek_max_tokens: int = 1024
+    deepseek_timeout_seconds: float = 30.0
 
     gemini_api_key: str = ""
     gemini_image_model: str = "gemini-2.5-flash-image"
     bunq_api_key: str = ""
     bunq_installation_token: str = ""
 
-    bedrock_max_tokens: int = 1024
-    bedrock_timeout_seconds: float = 30.0
     gemini_timeout_seconds: float = 60.0
     chat_rate_limit_per_minute: int = 5
 
